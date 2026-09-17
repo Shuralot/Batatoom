@@ -1,0 +1,973 @@
+/**
+ * Gerenciador de Sala e Lógica do Jogo KBUM
+ */
+
+const { normalizeWord, containsPrompt } = require('./utils');
+const dictionary = require('./dictionary');
+const promptGenerator = require('./promptGenerator');
+
+const INITIAL_LIVES = 3;
+const TENSION_STAGES = {
+  CALM: 1,      // 0% a 40%
+  WARNING: 2,   // 40% a 70%
+  ALERT: 3,     // 70% a 90%
+  PANIC: 4      // 90% a 100%
+};
+
+class GameRoom {
+  constructor(roomCode, io) {
+    this.code = roomCode;
+    this.io = io;
+
+    this.players = new Map(); // socketId -> player object
+    this.hostSocketId = null;
+    this.status = 'waiting'; // 'waiting', 'countdown', 'playing', 'round_pause', 'game_over'
+
+    this.roundQueue = []; // Ordem de jogadores na rodada atual (cada um joga exatamente uma vez)
+    this.currentQueueIndex = 0;
+    this.lastVictimId = null; // Vítima da última explosão (para garantir que passa para outro)
+
+    // Mata-Mata (Duelo entre os 2 últimos sobreviventes com dificuldade variável progressiva)
+    this.isMataMata = false;
+    this.mataMataHits = 0;
+
+    this.currentPrompt = '';
+    this.promptDifficulty = 'facil';
+    this.recentPrompts = [];
+
+    this.usedWords = new Set(); // Palavras normalizadas usadas na rodada
+    this.wordHistory = []; // Histórico das últimas palavras faladas
+
+    this.turnCount = 0;
+    this.roundCount = 0;
+
+    // Configurações definidas pelo Host
+    this.settings = {
+      difficulty: 'dinamico', // 'facil', 'medio', 'dificil', 'dinamico'
+      turnOrder: 'aleatorio',  // 'aleatorio', 'circular'
+      timerType: 'aleatorio'   // 'aleatorio', 'normal'
+    };
+
+    // Temporizador Invisível da Batata
+    this.bombTotalTimeMs = 0;
+    this.bombStartTime = 0;
+    this.bombEndTime = 0;
+    this.bombTimerInterval = null;
+    this.currentTensionStage = TENSION_STAGES.CALM;
+
+    this.lastExplodedExamples = [];
+
+    // Modo Single Player (Desafio Solo com Pontuação, Combos e Progressão Balanceada)
+    this.isSolo = false;
+    this.soloCombo = 0;
+    this.maxSoloCombo = 0;
+  }
+
+  getSoloLevelInfo() {
+    const player = this.getCurrentPlayer();
+    const hits = player ? player.wordsCount : 0;
+
+    if (hits < 5) {
+      return {
+        level: 1,
+        name: 'Iniciante',
+        baseTimeMs: 22000,
+        bonusSec: 3.5,
+        difficulty: 'facil'
+      };
+    } else if (hits < 10) {
+      return {
+        level: 2,
+        name: 'Aquecimento',
+        baseTimeMs: 20000,
+        bonusSec: 3.0,
+        difficulty: Math.random() < 0.25 ? 'medio' : 'facil'
+      };
+    } else if (hits < 17) {
+      return {
+        level: 3,
+        name: 'Ritmo',
+        baseTimeMs: 19000,
+        bonusSec: 2.8,
+        difficulty: Math.random() < 0.55 ? 'medio' : 'facil'
+      };
+    } else if (hits < 26) {
+      return {
+        level: 4,
+        name: 'Desafio',
+        baseTimeMs: 18000,
+        bonusSec: 2.4,
+        difficulty: Math.random() < 0.35 ? 'dificil' : 'medio'
+      };
+    } else if (hits < 36) {
+      return {
+        level: 5,
+        name: 'Frenético',
+        baseTimeMs: 17000,
+        bonusSec: 2.0,
+        difficulty: Math.random() < 0.65 ? 'dificil' : 'medio'
+      };
+    } else if (hits < 48) {
+      return {
+        level: 6,
+        name: 'Pesadelo',
+        baseTimeMs: 16000,
+        bonusSec: 1.8,
+        difficulty: Math.random() < 0.85 ? 'dificil' : 'medio'
+      };
+    } else if (hits < 62) {
+      return {
+        level: 7,
+        name: 'Insano',
+        baseTimeMs: 15000,
+        bonusSec: 1.5,
+        difficulty: Math.random() < 0.40 ? 'mestre' : 'dificil'
+      };
+    } else {
+      const extra = Math.floor((hits - 62) / 10);
+      return {
+        level: 8 + extra,
+        name: 'Mestre Supremo',
+        baseTimeMs: 15000,
+        bonusSec: 1.2,
+        difficulty: 'mestre'
+      };
+    }
+  }
+
+  getSoloMultiplier() {
+    if (this.soloCombo >= 13) return 2.5;
+    if (this.soloCombo >= 8) return 2.0;
+    if (this.soloCombo >= 4) return 1.5;
+    return 1.0;
+  }
+
+  updateSettings(socketId, newSettings) {
+    const player = this.players.get(socketId);
+    if (!player || !player.isHost) {
+      return { success: false, message: 'Apenas o anfitrião pode alterar as configurações.' };
+    }
+    if (this.status !== 'waiting') {
+      return { success: false, message: 'Não é possível alterar as configurações com a partida em andamento.' };
+    }
+
+    if (newSettings.difficulty && ['facil', 'medio', 'dificil', 'dinamico'].includes(newSettings.difficulty)) {
+      this.settings.difficulty = newSettings.difficulty;
+    }
+    if (newSettings.turnOrder && ['aleatorio', 'circular'].includes(newSettings.turnOrder)) {
+      this.settings.turnOrder = newSettings.turnOrder;
+    }
+    if (newSettings.timerType && ['aleatorio', 'normal'].includes(newSettings.timerType)) {
+      this.settings.timerType = newSettings.timerType;
+    }
+
+    this.broadcastRoomState();
+    return { success: true, settings: this.settings };
+  }
+
+  // --- Gerenciamento de Jogadores ---
+
+  addPlayer(socketId, nickname, isHost = false) {
+    const cleanNick = (nickname || 'Jogador').trim().substring(0, 16);
+    
+    // Gera uma cor de avatar ou seed
+    const colors = ['#f43f5e', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#14b8a6'];
+    const avatarColor = colors[this.players.size % colors.length];
+
+    const player = {
+      id: socketId,
+      nickname: cleanNick,
+      lives: INITIAL_LIVES,
+      score: 0,
+      isHost: isHost || this.players.size === 0,
+      avatarColor,
+      isAlive: true,
+      connected: true,
+      wordsCount: 0
+    };
+
+    this.players.set(socketId, player);
+    if (player.isHost) {
+      this.hostSocketId = socketId;
+    }
+
+    this.broadcastRoomState();
+    return player;
+  }
+
+  removePlayer(socketId) {
+    const player = this.players.get(socketId);
+    if (!player) return;
+
+    const wasCurrentTurn = this.getCurrentPlayer()?.id === socketId;
+    this.players.delete(socketId);
+
+    // Reorganiza a fila de turnos da rodada
+    const qIdx = this.roundQueue.indexOf(socketId);
+    if (qIdx !== -1) {
+      this.roundQueue.splice(qIdx, 1);
+      if (this.currentQueueIndex >= this.roundQueue.length) {
+        this.currentQueueIndex = 0;
+      }
+    }
+
+    // Se o host saiu, elege outro
+    if (this.hostSocketId === socketId && this.players.size > 0) {
+      const nextHost = this.players.values().next().value;
+      nextHost.isHost = true;
+      this.hostSocketId = nextHost.id;
+    }
+
+    // Se a partida está em andamento
+    if (this.status === 'playing') {
+      const alivePlayers = this.getAlivePlayers();
+      this.isMataMata = (alivePlayers.length === 2);
+
+      if (alivePlayers.length <= 1) {
+        this.endGame();
+      } else if (wasCurrentTurn) {
+        // Se era a vez de quem saiu, passa a batata para o próximo
+        this.advanceTurn(false);
+      }
+    }
+
+    this.broadcastRoomState();
+  }
+
+  getPlayer(socketId) {
+    return this.players.get(socketId);
+  }
+
+  getAlivePlayers() {
+    return Array.from(this.players.values()).filter(p => p.lives > 0);
+  }
+
+  getCurrentPlayer() {
+    if (this.roundQueue.length === 0) return null;
+    const socketId = this.roundQueue[this.currentQueueIndex];
+    return this.players.get(socketId) || null;
+  }
+
+  // --- Ciclo do Jogo ---
+
+  startGame(requestingSocketId) {
+    const player = this.players.get(requestingSocketId);
+    if (!player || !player.isHost) {
+      return { success: false, message: 'Apenas o anfitrião (Host) pode iniciar a partida.' };
+    }
+
+    const playerList = Array.from(this.players.values());
+    if (!this.isSolo && playerList.length < 2) {
+      return { success: false, message: 'É necessário ter pelo menos 2 jogadores para iniciar a partida!' };
+    }
+
+    // Reset geral dos jogadores
+    for (const p of playerList) {
+      p.lives = INITIAL_LIVES;
+      p.score = 0;
+      p.isAlive = true;
+      p.wordsCount = 0;
+    }
+
+    this.roundQueue = [];
+    this.currentQueueIndex = 0;
+    this.lastVictimId = null;
+    this.turnCount = 0;
+    this.roundCount = 1;
+    this.isMataMata = false;
+    this.mataMataHits = 0;
+    this.recentPrompts = [];
+    this.usedWords.clear();
+    this.wordHistory = [];
+    this.lastExplodedExamples = [];
+
+    this.status = 'countdown';
+    this.broadcastRoomState();
+
+    // Contagem regressiva de 3 segundos para suspense inicial
+    let count = 3;
+    const countInterval = setInterval(() => {
+      this.io.to(this.code).emit('countdown_tick', { count });
+      count--;
+      if (count < 0) {
+        clearInterval(countInterval);
+        this.startRound();
+      }
+    }, 1000);
+
+    return { success: true };
+  }
+
+  startRound() {
+    this.status = 'playing';
+    this.usedWords.clear();
+    this.turnCount++;
+
+    const alivePlayers = this.getAlivePlayers();
+    if (!this.isSolo && alivePlayers.length <= 1) {
+      this.endGame();
+      return;
+    }
+    if (this.isSolo && alivePlayers.length === 0) {
+      this.endGame();
+      return;
+    }
+
+    if (this.isSolo) {
+      this.isMataMata = false;
+      this.roundQueue = [alivePlayers[0].id];
+      this.currentQueueIndex = 0;
+      const soloInfo = this.getSoloLevelInfo();
+      this.bombTotalTimeMs = soloInfo.baseTimeMs;
+    } else {
+      // Mata-Mata: ativado exclusivamente quando sobram exatamente 2 players vivos
+      this.isMataMata = (alivePlayers.length === 2);
+
+    const aliveIds = alivePlayers.map(p => p.id);
+
+    // 1. Regra: Cada jogador joga EXATAMENTE UMA VEZ por rodada
+    // Se a batata explodiu na rodada anterior, o próximo a receber a batata NUNCA será a vítima!
+    if (this.settings.turnOrder === 'aleatorio') {
+      let firstCandidatePool = aliveIds;
+      if (this.lastVictimId && aliveIds.length > 1) {
+        const withoutVictim = aliveIds.filter(id => id !== this.lastVictimId);
+        if (withoutVictim.length > 0) {
+          firstCandidatePool = withoutVictim;
+        }
+      }
+
+      // Sorteia o primeiro da rodada
+      const firstId = firstCandidatePool[Math.floor(Math.random() * firstCandidatePool.length)];
+      // Embaralha o restante para que cada um jogue exatamente 1 vez
+      const others = aliveIds.filter(id => id !== firstId).sort(() => Math.random() - 0.5);
+      this.roundQueue = [firstId, ...others];
+    } else {
+      // Sequencial em círculo: inicia no jogador seguinte à última vítima
+      let startIdx = 0;
+      if (this.lastVictimId) {
+        const vIdx = aliveIds.indexOf(this.lastVictimId);
+        if (vIdx !== -1) {
+          startIdx = (vIdx + 1) % aliveIds.length;
+        }
+      }
+      this.roundQueue = [...aliveIds.slice(startIdx), ...aliveIds.slice(0, startIdx)];
+    }
+
+    this.currentQueueIndex = 0;
+    this.lastVictimId = null; // Limpa para a rodada atual
+
+    // 2. Tempo da batata:
+    // No Mata-Mata, a dificuldade interna variável acelera o tempo a cada acerto!
+    if (this.isMataMata) {
+      const baseMataMataTime = Math.max(7000, 16000 - this.mataMataHits * 750);
+      this.bombTotalTimeMs = baseMataMataTime;
+    } else if (this.settings.timerType === 'normal') {
+      this.bombTotalTimeMs = 18000;
+    } else {
+      const baseMin = Math.max(14000, 18000 - this.roundCount * 300);
+      const baseMax = Math.max(20000, 26000 - this.roundCount * 400);
+      this.bombTotalTimeMs = Math.floor(Math.random() * (baseMax - baseMin + 1)) + baseMin;
+    }
+  }
+    
+    this.bombStartTime = Date.now();
+    this.bombEndTime = this.bombStartTime + this.bombTotalTimeMs;
+    this.currentTensionStage = TENSION_STAGES.CALM;
+
+    // 3. Sorteia prompt respeitando dificuldade e mata-mata
+    this.pickNewPrompt();
+
+    // 4. Inicia o monitor de tensão invisível da batata
+    this.startBombLoop();
+
+    this.io.to(this.code).emit('round_started', {
+      round: this.roundCount,
+      currentPlayer: this.getCurrentPlayer(),
+      prompt: this.currentPrompt,
+      difficulty: this.promptDifficulty,
+      tensionStage: this.currentTensionStage,
+      isMataMata: this.isMataMata,
+      mataMataHits: this.mataMataHits,
+      isSolo: this.isSolo,
+      soloCombo: this.soloCombo,
+      maxSoloCombo: this.maxSoloCombo,
+      soloMultiplier: this.isSolo ? this.getSoloMultiplier() : 1.0,
+      soloLevel: this.isSolo ? this.getSoloLevelInfo().level : 1,
+      soloLevelName: this.isSolo ? this.getSoloLevelInfo().name : '',
+      timeLeftSec: this.isSolo ? Math.ceil(this.bombTotalTimeMs / 1000) : undefined
+    });
+
+    this.broadcastRoomState();
+  }
+
+  pickNewPrompt() {
+    let effectiveDifficulty = this.settings.difficulty;
+
+    if (this.isSolo) {
+      const soloInfo = this.getSoloLevelInfo();
+      effectiveDifficulty = soloInfo.difficulty;
+    } else if (this.isMataMata) {
+      if (this.mataMataHits >= 6) {
+        effectiveDifficulty = 'dificil';
+      } else if (this.mataMataHits >= 3) {
+        effectiveDifficulty = 'medio';
+      } else {
+        effectiveDifficulty = 'facil';
+      }
+    }
+
+    const nextPromptObj = promptGenerator.getPrompt(
+      effectiveDifficulty,
+      this.turnCount,
+      this.recentPrompts
+    );
+    this.currentPrompt = nextPromptObj.prompt;
+    this.promptDifficulty = nextPromptObj.difficulty;
+
+    this.recentPrompts.push(this.currentPrompt);
+    if (this.recentPrompts.length > 8) {
+      this.recentPrompts.shift();
+    }
+  }
+
+  startBombLoop() {
+    if (this.bombTimerInterval) {
+      clearInterval(this.bombTimerInterval);
+    }
+
+    // Intervalo frequente no servidor para verificar tempo e atualizar estágio de tensão
+    this.bombTimerInterval = setInterval(() => {
+      if (this.status !== 'playing') {
+        clearInterval(this.bombTimerInterval);
+        return;
+      }
+
+      const now = Date.now();
+      const remainingMs = Math.max(0, this.bombEndTime - now);
+      const remainingSec = Math.ceil(remainingMs / 1000);
+
+      let newStage = TENSION_STAGES.CALM;
+      if (this.isSolo) {
+        // No Solo, a tensão reflete a proximidade do estouro:
+        if (remainingSec <= 3) {
+          newStage = TENSION_STAGES.PANIC;
+        } else if (remainingSec <= 7) {
+          newStage = TENSION_STAGES.ALERT;
+        } else if (remainingSec <= 12) {
+          newStage = TENSION_STAGES.WARNING;
+        } else {
+          newStage = TENSION_STAGES.CALM;
+        }
+      } else {
+        const elapsed = now - this.bombStartTime;
+        const total = this.bombEndTime - this.bombStartTime;
+        const progress = Math.min(1, elapsed / total);
+
+        if (progress >= 0.90) {
+          newStage = TENSION_STAGES.PANIC;
+        } else if (progress >= 0.70) {
+          newStage = TENSION_STAGES.ALERT;
+        } else if (progress >= 0.40) {
+          newStage = TENSION_STAGES.WARNING;
+        }
+      }
+
+      // Emite tensão (e no Solo, sincroniza o tempo restante a cada segundo)
+      const shouldBroadcast = (newStage !== this.currentTensionStage) || 
+                              (this.isSolo && remainingSec !== this.lastBroadcastSec);
+
+      if (shouldBroadcast) {
+        this.currentTensionStage = newStage;
+        this.lastBroadcastSec = remainingSec;
+        this.io.to(this.code).emit('bomb_tension', {
+          stage: this.currentTensionStage,
+          isSolo: this.isSolo,
+          timeLeftSec: this.isSolo ? remainingSec : undefined
+        });
+      }
+
+      // BOMBA EXPLODIU!
+      if (now >= this.bombEndTime) {
+        clearInterval(this.bombTimerInterval);
+        this.handleBombExplosion();
+      }
+    }, 250);
+  }
+
+  handleBombExplosion() {
+    if (this.status !== 'playing') return;
+    this.status = 'round_pause';
+
+    const victim = this.getCurrentPlayer();
+    if (!victim) return;
+
+    // Perde 1 vida
+    victim.lives = Math.max(0, victim.lives - 1);
+    if (this.isSolo) {
+      this.soloCombo = 0; // Quebra a sequência de combo ao queimar a batata
+    }
+    if (victim.lives === 0) {
+      victim.isAlive = false;
+      // Remove da fila da rodada atual se ainda estiver presente
+      const idx = this.roundQueue.indexOf(victim.id);
+      if (idx !== -1) {
+        this.roundQueue.splice(idx, 1);
+        if (this.currentQueueIndex >= this.roundQueue.length) {
+          this.currentQueueIndex = 0;
+        }
+      }
+    }
+
+    // Salva a vítima para garantir que na próxima rodada a batata NUNCA comece com ela!
+    this.lastVictimId = victim.id;
+
+    // No Mata-Mata, arrefece um pouco os acertos após a explosão
+    if (this.isMataMata) {
+      this.mataMataHits = Math.max(0, this.mataMataHits - 2);
+    }
+
+    // Busca sugestões de palavras que o jogador poderia ter respondido
+    const missedExamples = dictionary.getExamplesForPrompt(this.currentPrompt, 5);
+    this.lastExplodedExamples = missedExamples;
+
+    this.io.to(this.code).emit('bomb_exploded', {
+      victim: {
+        id: victim.id,
+        nickname: victim.nickname,
+        lives: victim.lives,
+        isAlive: victim.isAlive
+      },
+      prompt: this.currentPrompt,
+      examples: missedExamples,
+      isMataMata: this.isMataMata,
+      isSolo: this.isSolo,
+      soloCombo: 0
+    });
+
+    this.broadcastRoomState();
+
+    // Checa fim de jogo
+    const alivePlayers = this.getAlivePlayers();
+    if (this.isSolo && alivePlayers.length === 0) {
+      setTimeout(() => {
+        this.endGame();
+      }, 2500);
+      return;
+    }
+    if (!this.isSolo && alivePlayers.length <= 1) {
+      setTimeout(() => {
+        this.endGame();
+      }, 2500);
+      return;
+    }
+
+    // Se ainda há 2 ou mais jogadores vivos, prepara próxima rodada
+    // e garante que a batata comece com outro jogador!
+    setTimeout(() => {
+      this.roundCount++;
+      this.startRound();
+    }, 3200);
+  }
+
+  /**
+   * Processa tentativa de palavra do jogador ativo
+   */
+  submitWord(socketId, rawWord) {
+    if (this.status !== 'playing') {
+      if (this.status === 'countdown') {
+        return { success: false, reason: 'Aguarde a contagem regressiva terminar!' };
+      }
+      if (this.status === 'round_pause') {
+        return { success: false, reason: 'Aguarde o início da próxima rodada!' };
+      }
+      return { success: false, reason: 'A partida não está em andamento.' };
+    }
+
+    const isSoloMode = Boolean(this.isSolo);
+    const currentPlayer = isSoloMode
+      ? (this.players.get(socketId) || this.getCurrentPlayer())
+      : this.getCurrentPlayer();
+
+    if (!currentPlayer || (!isSoloMode && currentPlayer.id !== socketId)) {
+      return { success: false, reason: 'Não é o seu turno de jogar!' };
+    }
+
+    if (!currentPlayer.isAlive) {
+      return { success: false, reason: 'Você foi eliminado nesta partida!' };
+    }
+
+    if (!rawWord || typeof rawWord !== 'string') {
+      return { success: false, reason: 'Digite uma palavra válida!' };
+    }
+
+    // Limpa pontuações acidentais nas bordas (ex: "casa.", "gato!", quotes)
+    const trimmed = rawWord.trim().replace(/^[^a-zA-Z\u00C0-\u017F]+|[^a-zA-Z\u00C0-\u017F]+$/g, '');
+    if (trimmed.length < 2) {
+      return { success: false, reason: 'A palavra deve ter pelo menos 2 letras!' };
+    }
+
+    const normalized = normalizeWord(trimmed);
+
+    // 1. Checa se contém o prompt/sílaba
+    if (!containsPrompt(normalized, this.currentPrompt)) {
+      return {
+        success: false,
+        reason: `A palavra não contém a combinação "${this.currentPrompt.toUpperCase()}"!`
+      };
+    }
+
+    // 2. Checa se já foi usada na rodada
+    if (this.usedWords.has(normalized)) {
+      return {
+        success: false,
+        reason: `A palavra "${trimmed}" já foi usada nesta rodada!`
+      };
+    }
+
+    // 3. Checa se existe no vocabulário PT-BR
+    const check = dictionary.checkWord(trimmed);
+    if (!check.valid) {
+      return {
+        success: false,
+        reason: `"${trimmed}" não foi encontrada no dicionário PT-BR!`
+      };
+    }
+
+    // --- Palavra Aceita com Sucesso! ---
+    const displayWord = check.display;
+    const wordDiff = check.difficulty;
+    this.usedWords.add(normalized);
+
+    // Pontuação: base por comprimento + bônus de complexidade/vocabulário
+    let wordPoints = 10 + Math.max(0, displayWord.length - 3) * 2;
+    if (wordDiff) {
+      if (wordDiff.level === 'mestre') wordPoints += 15;
+      else if (wordDiff.level === 'dificil') wordPoints += 8;
+      else if (wordDiff.level === 'medio') wordPoints += 3;
+    }
+
+    let timeBonusSeconds = 1.0;
+    let bonusReason = '';
+
+    if (this.isSolo) {
+      this.soloCombo++;
+      this.maxSoloCombo = Math.max(this.maxSoloCombo, this.soloCombo);
+      const multiplier = this.getSoloMultiplier();
+      wordPoints = Math.round(wordPoints * multiplier);
+      const soloInfo = this.getSoloLevelInfo();
+
+      // Bônus base do nível
+      let baseBonus = soloInfo.bonusSec;
+      let extraBonus = 0;
+
+      // Recompensa por vocabulário amplo e raridade da palavra
+      if (wordDiff && wordDiff.level === 'mestre') {
+        extraBonus += 1.5;
+        bonusReason = 'Palavra Rara! 💎';
+      } else if (wordDiff && wordDiff.level === 'dificil') {
+        extraBonus += 0.8;
+        bonusReason = 'Vocabulário Rico! ⚡';
+      } else if (displayWord.length >= 9) {
+        extraBonus += 1.5;
+        bonusReason = 'Palavra Longa! 🌟';
+      } else if (displayWord.length >= 7) {
+        extraBonus += 1.0;
+        bonusReason = 'Boa Palavra! ✨';
+      }
+
+      // Recompensa por sequência de acertos (combo)
+      if (this.soloCombo >= 10) {
+        extraBonus += 1.0;
+        bonusReason = bonusReason ? `${bonusReason} + Super Combo! 🔥` : 'Super Combo! 🔥';
+      } else if (this.soloCombo >= 5) {
+        extraBonus += 0.5;
+        bonusReason = bonusReason ? `${bonusReason} + Combo! 🔥` : 'Combo! 🔥';
+      }
+
+      timeBonusSeconds = parseFloat((baseBonus + extraBonus).toFixed(1));
+
+      // Acumula tempo na batata com teto de até 45 segundos para manter uma run longa!
+      const MAX_SOLO_TIME_MS = 45000;
+      const now = Date.now();
+      const currentRemaining = Math.max(0, this.bombEndTime - now);
+      const addedMs = Math.round(timeBonusSeconds * 1000);
+      const newRemaining = Math.min(MAX_SOLO_TIME_MS, currentRemaining + addedMs);
+
+      this.bombEndTime = now + newRemaining;
+      this.bombTotalTimeMs = Math.max(this.bombTotalTimeMs, newRemaining);
+
+      // Recalcula o estágio de tensão imediatamente com o novo tempo acumulado
+      const remainingSec = Math.ceil(newRemaining / 1000);
+      let newStage = TENSION_STAGES.CALM;
+      if (remainingSec <= 3) newStage = TENSION_STAGES.PANIC;
+      else if (remainingSec <= 7) newStage = TENSION_STAGES.ALERT;
+      else if (remainingSec <= 12) newStage = TENSION_STAGES.WARNING;
+      else newStage = TENSION_STAGES.CALM;
+
+      this.currentTensionStage = newStage;
+    } else {
+      timeBonusSeconds = this.isMataMata ? 0.5 : 1.0;
+      const timeBonusMs = Math.round(timeBonusSeconds * 1000);
+      this.bombEndTime += timeBonusMs;
+      this.bombTotalTimeMs += timeBonusMs;
+
+      // Dá um alívio mínimo de tempo (buffer de 4.5 segundos) se a batata estiver prestes a estourar
+      const timeLeft = this.bombEndTime - Date.now();
+      if (timeLeft < 4500) {
+        this.bombEndTime = Date.now() + 4500;
+      }
+    }
+
+    currentPlayer.score += wordPoints;
+    currentPlayer.wordsCount++;
+
+    // No Mata-Mata, a dificuldade interna variável aumenta a cada acerto!
+    if (!this.isSolo && this.isMataMata) {
+      this.mataMataHits++;
+    }
+
+    const historyItem = {
+      word: displayWord,
+      player: currentPlayer.nickname,
+      prompt: this.currentPrompt,
+      difficulty: wordDiff,
+      timestamp: Date.now()
+    };
+    this.wordHistory.unshift(historyItem);
+    if (this.wordHistory.length > 20) {
+      this.wordHistory.pop();
+    }
+
+    const answeredPrompt = this.currentPrompt;
+
+    if (this.isSolo) {
+      this.turnCount++;
+      this.pickNewPrompt();
+
+      const remainingSec = Math.ceil(Math.max(0, this.bombEndTime - Date.now()) / 1000);
+
+      this.io.to(this.code).emit('turn_passed', {
+        lastWord: historyItem,
+        nextPlayer: { id: currentPlayer.id, nickname: currentPlayer.nickname },
+        prompt: this.currentPrompt,
+        difficulty: this.promptDifficulty,
+        turnCount: this.turnCount,
+        isSolo: true,
+        soloCombo: this.soloCombo,
+        maxSoloCombo: this.maxSoloCombo,
+        soloMultiplier: this.getSoloMultiplier(),
+        soloLevel: this.getSoloLevelInfo().level,
+        soloLevelName: this.getSoloLevelInfo().name,
+        timeBonus: timeBonusSeconds,
+        bonusReason: bonusReason,
+        timeLeftSec: remainingSec
+      });
+
+      this.broadcastRoomState();
+
+      return {
+        success: true,
+        word: displayWord,
+        points: wordPoints,
+        prompt: answeredPrompt,
+        timeBonus: timeBonusSeconds,
+        bonusReason: bonusReason,
+        timeLeftSec: remainingSec,
+        isSolo: true,
+        soloCombo: this.soloCombo,
+        soloMultiplier: this.getSoloMultiplier(),
+        multiplier: this.getSoloMultiplier(),
+        difficulty: wordDiff
+      };
+    }
+
+    // Avança para o próximo jogador (cada um joga 1x por rodada no multiplayer)
+    this.advanceTurn(true, historyItem);
+
+    return {
+      success: true,
+      word: displayWord,
+      points: wordPoints,
+      prompt: answeredPrompt,
+      timeBonus: timeBonusSeconds,
+      difficulty: wordDiff
+    };
+  }
+
+  advanceTurn(successfulPass = true, lastWordItem = null) {
+    if (this.roundQueue.length === 0) return;
+
+    this.currentQueueIndex++;
+
+    // Regra: cada jogador joga UMA vez por rodada!
+    // Se todos jogaram nesta rodada, inicia a próxima com novo sorteio de jogadores
+    if (this.currentQueueIndex >= this.roundQueue.length) {
+      this.roundCount++;
+      this.startRound();
+      return;
+    }
+
+    this.turnCount++;
+
+    // Sorteia novo prompt
+    this.pickNewPrompt();
+
+    const nextPlayer = this.getCurrentPlayer();
+
+    this.io.to(this.code).emit('turn_passed', {
+      lastWord: lastWordItem,
+      nextPlayer: nextPlayer ? { id: nextPlayer.id, nickname: nextPlayer.nickname } : null,
+      prompt: this.currentPrompt,
+      difficulty: this.promptDifficulty,
+      turnCount: this.turnCount,
+      isMataMata: this.isMataMata,
+      mataMataHits: this.mataMataHits,
+      timeBonus: this.isMataMata ? 0.5 : 1.0
+    });
+
+    this.broadcastRoomState();
+  }
+
+  nextTurn(successfulPass = true, lastWordItem = null) {
+    this.advanceTurn(successfulPass, lastWordItem);
+  }
+
+  endGame() {
+    if (this.bombTimerInterval) {
+      clearInterval(this.bombTimerInterval);
+    }
+    this.status = 'game_over';
+
+    const alivePlayers = this.getAlivePlayers();
+    const winner = alivePlayers.length > 0 ? alivePlayers[0] : null;
+
+    // Ordena ranking por vidas restantes e score
+    const ranking = Array.from(this.players.values()).sort((a, b) => {
+      if (b.lives !== a.lives) return b.lives - a.lives;
+      return b.score - a.score;
+    });
+
+    this.io.to(this.code).emit('game_over', {
+      isSolo: this.isSolo,
+      soloStats: this.isSolo ? {
+        score: ranking[0]?.score || 0,
+        wordsCount: ranking[0]?.wordsCount || 0,
+        maxCombo: this.maxSoloCombo,
+        level: this.getSoloLevelInfo().level,
+        levelName: this.getSoloLevelInfo().name
+      } : null,
+      winner: winner ? { id: winner.id, nickname: winner.nickname, score: winner.score } : null,
+      ranking: ranking.map(p => ({
+        id: p.id,
+        nickname: p.nickname,
+        lives: p.lives,
+        score: p.score,
+        wordsCount: p.wordsCount
+      }))
+    });
+
+    this.broadcastRoomState();
+  }
+
+  restartSolo(requestingSocketId) {
+    if (!this.isSolo) return this.restartLobby(requestingSocketId);
+    if (this.bombTimerInterval) {
+      clearInterval(this.bombTimerInterval);
+    }
+    const p = this.players.get(requestingSocketId);
+    if (p) {
+      p.lives = INITIAL_LIVES;
+      p.score = 0;
+      p.isAlive = true;
+      p.wordsCount = 0;
+    }
+    this.soloCombo = 0;
+    this.maxSoloCombo = 0;
+    this.turnCount = 0;
+    this.roundCount = 1;
+    this.usedWords.clear();
+    this.wordHistory = [];
+    this.lastExplodedExamples = [];
+    return this.startGame(requestingSocketId);
+  }
+
+  restartLobby(requestingSocketId) {
+    const player = this.players.get(requestingSocketId);
+    if (!player || !player.isHost) {
+      return { success: false, message: 'Apenas o anfitrião pode reiniciar a sala.' };
+    }
+
+    if (this.bombTimerInterval) {
+      clearInterval(this.bombTimerInterval);
+    }
+
+    this.status = 'waiting';
+    for (const p of this.players.values()) {
+      p.lives = INITIAL_LIVES;
+      p.score = 0;
+      p.isAlive = true;
+      p.wordsCount = 0;
+    }
+
+    this.roundQueue = [];
+    this.currentQueueIndex = 0;
+    this.lastVictimId = null;
+    this.isMataMata = false;
+    this.mataMataHits = 0;
+    this.usedWords.clear();
+    this.wordHistory = [];
+    this.lastExplodedExamples = [];
+    this.turnCount = 0;
+    this.roundCount = 0;
+
+    this.io.to(this.code).emit('lobby_reset');
+    this.broadcastRoomState();
+
+    return { success: true };
+  }
+
+  // --- Broadcast de Estado ---
+
+  getPublicState() {
+    const currentPlayer = this.getCurrentPlayer();
+    return {
+      code: this.code,
+      status: this.status,
+      hostId: this.hostSocketId,
+      isSolo: this.isSolo,
+      soloCombo: this.soloCombo,
+      maxSoloCombo: this.maxSoloCombo,
+      soloLevel: this.isSolo ? this.getSoloLevelInfo().level : 1,
+      soloLevelName: this.isSolo ? this.getSoloLevelInfo().name : '',
+      soloMultiplier: this.isSolo ? this.getSoloMultiplier() : 1.0,
+      players: Array.from(this.players.values()).map(p => ({
+        id: p.id,
+        nickname: p.nickname,
+        lives: p.lives,
+        score: p.score,
+        isHost: p.isHost,
+        isAlive: p.isAlive,
+        avatarColor: p.avatarColor,
+        wordsCount: p.wordsCount
+      })),
+      currentPlayerId: currentPlayer ? currentPlayer.id : null,
+      currentPlayerNick: currentPlayer ? currentPlayer.nickname : null,
+      currentPrompt: this.currentPrompt,
+      promptDifficulty: this.promptDifficulty,
+      roundCount: this.roundCount,
+      turnCount: this.turnCount,
+      tensionStage: this.currentTensionStage,
+      settings: this.settings,
+      isMataMata: this.isMataMata,
+      mataMataHits: this.mataMataHits,
+      wordHistory: this.wordHistory.slice(0, 10),
+      lastExplodedExamples: this.lastExplodedExamples
+    };
+  }
+
+  broadcastRoomState() {
+    this.io.to(this.code).emit('room_state', this.getPublicState());
+  }
+}
+
+module.exports = GameRoom;

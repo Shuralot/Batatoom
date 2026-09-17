@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Batatoom! - Batata Quente de Palavras PT-BR</title>
+  <meta name="description" content="Party game frenético de palavras em Português Brasileiro. Pense rápido antes que a bomba exploda!">
+  <meta name="theme-color" content="#0b0f19">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="theme-dark">
+  <div id="app" class="app-container">
+
+    <!-- CABEÇALHO GLOBAL -->
+    <header class="top-header">
+      <div class="brand">
+        <span class="brand-icon">🥔</span>
+        <h1 class="brand-title">Batatoom!</h1>
+      </div>
+      <div class="header-actions">
+        <button id="btn-toggle-sound" class="btn-icon" title="Ativar/Desativar Som" aria-label="Som">
+          <span id="sound-icon">🔊</span>
+        </button>
+        <button id="btn-toggle-tv" class="btn-icon" title="Modo Telão / TV" aria-label="Modo TV">
+          <span>📺</span>
+        </button>
+        <button id="btn-show-rules" class="btn-icon" title="Como Jogar" aria-label="Regras">
+          <span>❓</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- TELA 1: LOBBY / ENTRADA NA SALA -->
+    <section id="screen-lobby" class="screen active">
+      <div class="lobby-card card-glass">
+        <div class="lobby-hero">
+          <div class="bomb-avatar pulse">💣</div>
+          <h2>Batata Quente de Palavras</h2>
+          <p class="subtitle">Mais de 400.000 palavras em Português do Brasil!</p>
+        </div>
+
+        <form id="form-join" class="lobby-form">
+          <div class="input-group">
+            <label for="input-nickname">Seu Apelido</label>
+            <input 
+              type="text" 
+              id="input-nickname" 
+              placeholder="Ex: Paulinho, Bia, Capitão" 
+              maxlength="16" 
+              autocomplete="nickname"
+              required
+            >
+          </div>
+
+          <div class="input-group">
+            <label for="input-room-code">Código da Sala</label>
+            <div class="room-input-wrapper">
+              <input 
+                type="text" 
+                id="input-room-code" 
+                placeholder="Ex: BOMB" 
+                maxlength="6" 
+                style="text-transform: uppercase;"
+              >
+              <button type="button" id="btn-random-code" class="btn-secondary btn-sm" title="Gerar código aleatório">
+                🎲
+              </button>
+            </div>
+            <small class="helper-text">Deixe em branco para criar ou entrar na sala rápida.</small>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" id="btn-enter-room" class="btn-primary btn-glow btn-lg">
+              <span>ENTRAR EM SALA MULTIPLAYER</span> 👥
+            </button>
+            <div class="solo-divider">
+              <span>OU DESAFIE SEUS RECORDES</span>
+            </div>
+            <button type="button" id="btn-play-solo" class="btn-solo btn-glow btn-lg">
+              <span>🎮 JOGAR MODO SOLO (PONTOS)</span> 🏆
+            </button>
+          </div>
+        </form>
+
+        <div class="lobby-footer-info">
+          <div class="dict-badge">
+            <span class="badge-dot"></span>
+            <span id="dict-status-text">Carregando dicionário PT-BR...</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TELA 2: SALA DE ESPERA (AGUARDANDO JOGADORES) -->
+    <section id="screen-waiting" class="screen">
+      <div class="waiting-card card-glass">
+        <div class="waiting-header">
+          <div class="room-code-badge">
+            <span class="badge-label">CÓDIGO DA SALA:</span>
+            <span id="display-room-code" class="code-highlight">----</span>
+            <button id="btn-copy-code" class="btn-secondary btn-xs" title="Copiar Link de Convite">📋 Copiar</button>
+          </div>
+          <p class="waiting-hint">Convide seus amigos para acessar pelo celular!</p>
+        </div>
+
+        <!-- QR Code para conexão fácil no Wi-Fi -->
+        <div class="qr-share-box">
+          <div id="qrcode-container" class="qrcode-wrapper"></div>
+          <span class="qr-label">Aponte a câmera do celular para entrar</span>
+        </div>
+
+        <!-- Lista de Jogadores na Sala -->
+        <div class="players-section">
+          <h3 class="section-title">
+            <span>Jogadores Conectados</span>
+            <span id="player-count-badge" class="count-pill">0</span>
+          </h3>
+          <div id="waiting-players-list" class="players-grid">
+            <!-- Renderizado dinamicamente -->
+          </div>
+        </div>
+
+        <!-- Painel de Configurações da Sala (Definido pelo Host) -->
+        <div class="room-settings-card">
+          <div class="settings-header">
+            <span class="settings-title">⚙️ Regras da Sala <small id="settings-role-tag">(Apenas o Anfitrião pode alterar)</small></span>
+          </div>
+
+          <div class="settings-grid">
+            <!-- Dificuldade -->
+            <div class="setting-item">
+              <label for="setting-difficulty">🥔 Dificuldade:</label>
+              <select id="setting-difficulty" class="setting-select">
+                <option value="dinamico">⚡ Dinâmica (Aquece aos poucos)</option>
+                <option value="facil">🟢 Fácil (Combinações simples)</option>
+                <option value="medio">🟡 Médio (Equilibrado)</option>
+                <option value="dificil">🔴 Difícil (Desafiador, sem impossíveis)</option>
+              </select>
+            </div>
+
+            <!-- Vez do Player -->
+            <div class="setting-item">
+              <label for="setting-turn-order">🎲 Vez da Batata:</label>
+              <select id="setting-turn-order" class="setting-select">
+                <option value="aleatorio">🎲 Aleatória (Surpresa total!)</option>
+                <option value="circular">🔄 Em Círculo (Sequencial)</option>
+              </select>
+            </div>
+
+            <!-- Tipo de Tempo -->
+            <div class="setting-item">
+              <label for="setting-timer-type">⏱️ Tempo da Batata:</label>
+              <select id="setting-timer-type" class="setting-select">
+                <option value="aleatorio">🕵️ Aleatório (Tempo Secreto)</option>
+                <option value="normal">⏳ Normal (15s Fixo)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controles do Host -->
+        <div class="waiting-actions">
+          <div id="host-controls" class="host-panel">
+            <button id="btn-start-game" class="btn-primary btn-glow btn-lg">
+              🥔 COMEÇAR BATATA QUENTE 🔥
+            </button>
+            <p id="start-hint" class="start-hint">Mínimo de 2 jogadores para iniciar.</p>
+          </div>
+          <div id="guest-controls" class="guest-panel" style="display: none;">
+            <div class="spinner-pulse"></div>
+            <p>Aguardando o anfitrião iniciar a partida...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TELA 3: ARENA DE JOGO (PARTIDA ROLANDO) -->
+    <section id="screen-game" class="screen">
+      <!-- Barra Superior do Jogo -->
+      <div class="game-hud">
+        <div class="hud-item hud-room">
+          <span class="hud-label">SALA</span>
+          <span id="hud-room-code" class="hud-value">----</span>
+        </div>
+        <div class="hud-item hud-round">
+          <span class="hud-label">RODADA</span>
+          <span id="hud-round-number" class="hud-value">1</span>
+        </div>
+        <div class="hud-item hud-difficulty">
+          <span class="hud-label">DIFICULDADE</span>
+          <span id="hud-difficulty-badge" class="badge-diff easy">FÁCIL</span>
+        </div>
+        <div class="hud-item hud-timer-mode">
+          <span class="hud-label">TEMPO</span>
+          <span id="hud-timer-badge" class="badge-diff medium">ALEATÓRIO</span>
+        </div>
+        <div id="hud-solo-score-item" class="hud-item hud-solo" style="display: none;">
+          <span class="hud-label">PONTOS</span>
+          <span id="hud-solo-score" class="hud-value" style="color: #34d399;">0</span>
+        </div>
+        <div id="hud-solo-combo-item" class="hud-item hud-solo" style="display: none;">
+          <span class="hud-label">COMBO</span>
+          <span id="hud-solo-combo" class="badge-combo">🔥 x1.0</span>
+        </div>
+        <div id="hud-solo-record-item" class="hud-item hud-solo" style="display: none;">
+          <span class="hud-label">RECORDE</span>
+          <span id="hud-solo-record" class="hud-value" style="color: #fbbf24;">0</span>
+        </div>
+      </div>
+
+      <!-- ARENA CENTRAL (BATATA QUENTE E PROMPT) -->
+      <div class="potato-arena">
+        <!-- Halo de Calor da Batata -->
+        <div id="tension-halo" class="tension-halo tension-stage-1"></div>
+
+        <!-- Seta Indicadora de Turno (aponta dinamicamente para o jogador) -->
+        <div id="turn-pointer-arrow" class="turn-pointer-arrow">
+          <div class="pointer-arrow-content">
+            <span class="arrow-glyph">👉</span>
+            <span id="pointer-target-name" class="arrow-text">É a vez de Fulano!</span>
+          </div>
+        </div>
+
+        <!-- BANNER DE MATA-MATA (DUELO FINAL) -->
+        <div id="matamata-banner" class="matamata-banner" style="display: none;">
+          <span class="fire-icon pulse">🔥⚔️</span>
+          <span class="matamata-title">MATA-MATA: DUELO FINAL!</span>
+          <span id="matamata-level" class="matamata-level-badge">NÍVEL 1</span>
+        </div>
+
+        <!-- A BATATA QUENTE -->
+        <div id="bomb-container" class="potato-container wobble-stage-1">
+          <!-- Vapor e Fumaça Quente -->
+          <div class="steam-wrapper">
+            <span class="steam-particle s1">♨️</span>
+            <span class="steam-particle s2">♨️</span>
+            <span class="steam-particle s3">♨️</span>
+          </div>
+
+          <!-- Manteiga derretendo -->
+          <div class="butter-melt"></div>
+
+          <!-- Corpo Oval da Batata Quente -->
+          <div id="bomb-body" class="potato-body">
+            <!-- Detalhes da Casca da Batata -->
+            <div class="potato-spots">
+              <span class="spot sp1"></span>
+              <span class="spot sp2"></span>
+              <span class="spot sp3"></span>
+            </div>
+
+            <!-- Olhinhos expressivos da batata -->
+            <div class="potato-face">
+              <span id="potato-expression" class="face-emoji">😅</span>
+            </div>
+
+            <!-- O Prompt Central (Sílabas / Letras) -->
+            <div class="prompt-box">
+              <div class="prompt-label">CONTÉM:</div>
+              <div id="display-prompt" class="prompt-letters">---</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Indicador de Vez -->
+        <div id="turn-announcement" class="turn-announcement">
+          <span class="turn-tag">🥔 BATATA COM:</span>
+          <span id="current-player-name" class="turn-name">Aguardando...</span>
+        </div>
+
+        <!-- DIGITAÇÃO EM TEMPO REAL NO CENTRO DA ARENA -->
+        <div id="live-typing-display" class="live-typing-display">
+          <span class="live-typing-tag">⌨️ DIGITANDO:</span>
+          <div class="live-typing-bubble">
+            <span id="live-typing-letters" class="live-typing-letters">_</span>
+          </div>
+        </div>
+
+        <!-- BANNER DE PALAVRA ACEITA COM SÍLABA DESTACADA EM VERDE -->
+        <div id="last-word-banner" class="last-word-banner" style="display: none;">
+          <span class="last-word-sparkle">✨</span>
+          <span id="last-word-author" class="last-word-author"></span>
+          <span id="last-word-highlighted" class="last-word-highlighted"></span>
+        </div>
+      </div>
+
+      <!-- JOGADORES ESPALHADOS AO REDOR COM SETA APONTANDO -->
+      <div id="game-players-bar" class="game-players-spread">
+        <!-- Renderizado dinamicamente espalhado com cards grandes, vidas e seta -->
+      </div>
+
+      <!-- PAINEL DE AÇÃO DO JOGADOR (MOBILE-FIRST) -->
+      <div id="player-action-dock" class="player-action-dock">
+        <!-- Visão Quando for a sua vez -->
+        <div id="my-turn-panel" class="my-turn-panel" style="display: none;">
+          <div class="turn-banner">
+            <span class="turn-badge-pulse">⚡ SUA VEZ! DIGITE RÁPIDO! ⚡</span>
+          </div>
+          <form id="form-word-submit" class="word-form">
+            <div class="word-input-container">
+              <input 
+                type="text" 
+                id="input-word" 
+                class="input-word"
+                placeholder="Digite uma palavra..." 
+                autocomplete="off" 
+                autocorrect="off" 
+                autocapitalize="characters" 
+                spellcheck="false"
+                maxlength="25"
+              >
+              <button type="submit" id="btn-submit-word" class="btn-submit">
+                <span>ENVIAR</span> 💥
+              </button>
+            </div>
+          </form>
+          <div id="feedback-message" class="feedback-message"></div>
+        </div>
+
+        <!-- Visão Quando for a vez de outro jogador -->
+        <div id="other-turn-panel" class="other-turn-panel">
+          <p id="waiting-other-msg" class="waiting-other-msg">
+            <span class="pulse-dot"></span>
+            Aguarde sua vez! A bomba está passando...
+          </p>
+        </div>
+
+        <!-- Visão Espectador / Eliminado -->
+        <div id="eliminated-panel" class="eliminated-panel" style="display: none;">
+          <p class="eliminated-msg">💀 Você foi eliminado nesta partida! Assista ao desfecho dos sobreviventes.</p>
+        </div>
+      </div>
+
+      <!-- FEED DAS ÚLTIMAS PALAVRAS VÁLIDAS -->
+      <div class="words-feed-container">
+        <span class="feed-title">ÚLTIMAS PALAVRAS ACEITAS:</span>
+        <div id="words-feed-list" class="words-feed-list">
+          <!-- Tags das palavras -->
+        </div>
+      </div>
+    </section>
+
+    <!-- OVERLAY: CONTAGEM REGRESSIVA -->
+    <div id="overlay-countdown" class="overlay-modal" style="display: none;">
+      <div class="countdown-card">
+        <span class="countdown-label">A PARTIDA VAI COMEÇAR EM...</span>
+        <div id="countdown-number" class="countdown-number">3</div>
+      </div>
+    </div>
+
+    <!-- OVERLAY: EXPLOSÃO DA BATATA -->
+    <div id="overlay-explosion" class="overlay-modal" style="display: none;">
+      <div class="explosion-card">
+        <div class="explosion-icon">🥔💥</div>
+        <h2 class="explosion-title">BATATOOM! A BATATA QUEIMOU!</h2>
+        <p id="explosion-victim-text" class="explosion-victim">Fulano virou purê e perdeu 1 vida!</p>
+        
+        <div class="missed-words-box">
+          <span class="missed-label">Palavras que você poderia ter dito:</span>
+          <div id="missed-words-list" class="missed-tags">
+            <!-- Exemplos preenchidos dinamicamente -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERLAY: FIM DE JOGO / PÓDIO -->
+    <div id="overlay-game-over" class="overlay-modal" style="display: none;">
+      <div class="gameover-card card-glass">
+        <div class="trophy-icon">🏆</div>
+        <h2 class="gameover-title">FIM DE JOGO!</h2>
+
+        <!-- CONTEÚDO MULTIPLAYER -->
+        <div id="gameover-multiplayer-box">
+          <div class="winner-box">
+            <span class="winner-tag">GRANDE CAMPEÃO</span>
+            <h3 id="winner-name" class="winner-name">Jogador</h3>
+          </div>
+
+          <div class="podium-section">
+            <h4>Classificação Final:</h4>
+            <div id="ranking-list" class="ranking-list">
+              <!-- Ranking de sobrevivência -->
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTEÚDO SINGLE PLAYER (DESAFIO SOLO) -->
+        <div id="gameover-solo-box" style="display: none;">
+          <div id="solo-highscore-alert" class="solo-highscore-alert" style="display: none;">
+            <span>🎉 NOVO RECORDE PESSOAL! 🎉</span>
+          </div>
+          <div class="solo-stats-grid">
+            <div class="solo-stat-card">
+              <span class="stat-label">PONTUAÇÃO</span>
+              <span id="solo-final-score" class="stat-val highlight-green">0</span>
+            </div>
+            <div class="solo-stat-card">
+              <span class="stat-label">RECORDE</span>
+              <span id="solo-best-score" class="stat-val highlight-gold">0</span>
+            </div>
+            <div class="solo-stat-card">
+              <span class="stat-label">PALAVRAS</span>
+              <span id="solo-final-words" class="stat-val">0</span>
+            </div>
+            <div class="solo-stat-card">
+              <span class="stat-label">MAIOR COMBO</span>
+              <span id="solo-final-combo" class="stat-val highlight-orange">🔥 0</span>
+            </div>
+            <div class="solo-stat-card full-width">
+              <span class="stat-label">NÍVEL ALCANÇADO</span>
+              <span id="solo-final-level" class="stat-val">Nível 1 (Iniciante)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="gameover-actions">
+          <button id="btn-play-again" class="btn-primary btn-glow btn-lg" style="display: none;">
+            🔄 JOGAR NOVAMENTE
+          </button>
+          <button id="btn-play-again-solo" class="btn-solo btn-glow btn-lg" style="display: none;">
+            🎮 JOGAR NOVAMENTE (SOLO)
+          </button>
+          <button id="btn-exit-solo" class="btn-secondary btn-sm" style="display: none;">
+            🏠 MENU INICIAL
+          </button>
+          <p id="play-again-hint" class="start-hint">Aguardando o anfitrião reiniciar a sala...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: REGRAS DO JOGO -->
+    <div id="modal-rules" class="modal-backdrop" style="display: none;">
+      <div class="modal-content card-glass">
+        <div class="modal-header">
+          <h3>Como Jogar Batatoom! 🥔💣</h3>
+          <button id="btn-close-rules" class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="rule-item">
+            <span class="rule-num">1</span>
+            <p><strong>A Bomba está ligada:</strong> Cada jogador começa com <strong>3 vidas (❤️)</strong>. A bomba passa de mão em mão!</p>
+          </div>
+          <div class="rule-item">
+            <span class="rule-num">2</span>
+            <p><strong>Forme Palavras em PT-BR:</strong> Na sua vez, digite qualquer palavra válida do português que contenha as letras exibidas na bomba (ex: se o prompt for <strong>"CA"</strong>, valem <em>maçã</em>, <em>cão</em>, <em>café</em>, <em>abacate</em>).</p>
+          </div>
+          <div class="rule-item">
+            <span class="rule-num">3</span>
+            <p><strong>Acentos são Livres:</strong> Você pode digitar com ou sem acentos (tanto <em>"maca"</em> quanto <em>"maçã"</em> funcionam!).</p>
+          </div>
+          <div class="rule-item">
+            <span class="rule-num">4</span>
+            <p><strong>Sem Repetição:</strong> Palavras já ditas na mesma rodada não podem ser repetidas.</p>
+          </div>
+          <div class="rule-item">
+            <span class="rule-num">5</span>
+            <p><strong>Tempo Invisível:</strong> O tempo da bomba é secreto! O tique-taque vai ficando cada vez mais frenético conforme a explosão se aproxima. Se explodir com você, você perde 1 vida!</p>
+          </div>
+          <div class="rule-item">
+            <span class="rule-num">6</span>
+            <p><strong>Sobrevivência:</strong> O último sobrevivente com vidas restantes vence a partida!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Socket.IO e Scripts -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Gerador de QR Code no Browser (leve e sem dependências) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="/js/audio.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

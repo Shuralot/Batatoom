@@ -1,0 +1,32 @@
+{
+  "name": "batatoom",
+  "version": "1.0.0",
+  "description": "Batatoom! - Batata Quente de Palavras em Português Brasileiro",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node --watch server.js --tunnel",
+    "start": "node server.js",
+    "build:dict": "node scripts/build-dictionary.js",
+    "test": "node test/test-game.js",
+    "tunnel": "node scripts/tunnel.js"
+  },
+  "keywords": [
+    "bomb-party",
+    "word-game",
+    "pt-br",
+    "socketio",
+    "party-game"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2",
+    "localtunnel": "^2.0.2",
+    "qrcode-terminal": "^0.12.0",
+    "socket.io": "^4.8.1",
+    "untun": "^0.2.2"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.3"
+  }
+}
