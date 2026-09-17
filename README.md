@@ -1,56 +1,76 @@
-# 🥔💣 Batatoom! - Batata Quente de Palavras (PT-BR)
+# 🥔💣 Batatoom! — Batata Quente de Palavras
 
-Um party game multiplayer em tempo real inspirado no clássico *Bomb Party* (JKLM), projetado e lapidado especificamente para o **Português do Brasil (PT-BR)** de altíssima qualidade.
+<p align="center">
+  <img src="public/favicon.ico" alt="Batatoom Logo" width="80" height="80" />
+</p>
 
-A aplicação é **100% autônoma e centralizada**: um único servidor Node.js com Express e Socket.IO gerencia o jogo, o dicionário em memória e serve a interface web tanto para computadores quanto para celulares.
+<p align="center">
+  <strong>O party game multiplayer em tempo real de vocabulário mais eletrizante do Brasil!</strong><br>
+  Inspirado no clássico <em>Bomb Party</em>, reinventado com uma batata quente expressiva e um dicionário autêntico de <strong>mais de 400.000 palavras em Português do Brasil</strong>.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Socket.IO-Real--Time-010101?style=for-the-badge&logo=socketdotio&logoColor=white" alt="Socket.IO" />
+  <img src="https://img.shields.io/badge/Express-Fast-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express" />
+  <img src="https://img.shields.io/badge/Dicionário-403k+_PT--BR-009c3b?style=for-the-badge" alt="Dicionário PT-BR" />
+  <img src="https://img.shields.io/badge/Túnel-Cloudflare-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare Tunnel" />
+  <img src="https://img.shields.io/badge/Licença-MIT-blue?style=for-the-badge" alt="MIT License" />
+</p>
 
 ---
 
-## ✨ Destaques e Recursos
+## 🎯 O que é o Batatoom?
 
-### 1. Dicionário PT-BR Rico e Autêntico (400.000+ Palavras)
-- **Resolvendo o problema crônico do JKLM**: o jogo reconhece o vocabulário real falado no Brasil, incluindo:
-  - Todas as formas flexionadas de verbos (ex: *"cantávamos"*, *"fizeram"*, *"correríamos"*).
-  - Plurais, diminutivos, aumentativos e formas femininas (ex: *"maçãs"*, *"cães"*, *"portinhas"*).
-  - Nomes geográficos e léxico da língua portuguesa.
-- **Normalização Inteligente e Tolerância a Acentos**:
-  - Aceita digitação tanto **com acento** quanto **sem acento** (*"maca"* ou *"maçã"*, *"coracao"* ou *"coração"*, *"cafe"* ou *"café"*).
-  - Checagem flexível de substrings: se o prompt for **"CA"**, palavras como *"maçã"*, *"cão"* e *"café"* são aceitas; se for **"AO"**, *"coração"* é aceito.
-- **Controle de Repetição**: impede que a mesma palavra seja reutilizada na mesma rodada.
+O **Batatoom!** é uma experiência rápida, divertida e sem complicação para jogar direto no navegador — seja no computador, no celular ou projetado na TV da sala.
 
-### 2. A Bomba agora é uma BATATA QUENTE 🥔🔥
-- Visual personalizado de **Batata Quente**, com vapor quente saindo, manteiga derretendo e rostinho expressivo que vai suando e entrando em pânico conforme a temperatura sobe!
-- **Jogadores Espalhados com Seta Indicadora**: avatares dispostos em cards amplos e confortáveis, com uma seta animada brilhante apontando diretamente para quem está com a batata!
+A dinâmica é viciante: a batata quente cai na sua mão com uma combinação de letras (ex: **"TR"**). Você tem poucos segundos para digitar uma palavra válida que contenha essa sílaba (ex: *"e**str**ada"*, *"en**tr**ar"*, *"ve**tr**ô"*). Se acertar a tempo, a batata é passada adiante com alívio e bônus; se o tempo acabar... **BOOM!** Você perde uma vida!
 
-### 3. Painel de Configurações da Sala (Definido pelo Host)
-Quem cria a sala tem controle total sobre as regras antes de iniciar:
-- **Dificuldade**:
-  - **Dinâmica**: começa amigável e esquenta conforme os turnos avançam.
-  - **Fácil**: prompts amplos e com centenas de opções.
-  - **Médio**: equilíbrio entre agilidade e raciocínio.
-  - **Difícil**: desafiador, **mas sem combinações impossíveis** (piso mínimo calibrado de 60 a 180 palavras reais conhecidas).
-- **Vez da Batata**:
-  - **Aleatória (Surpresa!)**: a batata pula imprevisivelmente de um jogador para outro, elevando a adrenalina.
-  - **Em Círculo (Sequencial)**: turnos organizados em fila circular.
-- **Tipo de Tempo da Batata**:
-  - **Aleatório (Invisível)**: tempo secreto sorteado pelo servidor (entre 12 e 22s), onde só a tensão avisa quando vai explodir.
-  - **Normal (Fixo 15s)**: tempo padrão constante a cada rodada.
+---
 
-### 4. Interface Arcade Responsiva (Celular + Telão / TV)
-- **Modo Celular (Mobile-First)**:
-  - Foco automático de teclado quando chega a sua vez de digitar.
-  - Feedback tátil com vibração (`navigator.vibrate`) em acertos, erros e explosões.
-  - Indicador claro de erro com animação de tremor e motivo (*"Não contém as letras"*, *"Já usada nesta rodada"*, *"Não existe no dicionário"*).
-- **Modo Host / Telão (TV da Sala)**:
-  - Botão de alternância para **Modo TV (📺)** com elementos aumentados, bomba gigante animada e visual cinema para projetar na sala enquanto amigos jogam pelo celular.
-- **QR Code no Browser e no Terminal**:
-  - A sala gera um QR Code na tela e no terminal para amigos apontarem a câmera do celular e entrarem instantaneamente.
+## ✨ Principais Recursos e Diferenciais
 
-### 5. Áudio 100% Procedural (Web Audio API)
-- **Zero arquivos de áudio externos**: sem requisições `.mp3` ou problemas de carregamento 404.
-- Tique-taque com pitch e frequência dinâmicos.
-- Efeito de explosão realista (ruído branco + filtro passa-baixas + sub-bass).
-- Chimes alegres de acerto e buzina grave de erro.
+### 📚 Dicionário PT-BR Rico e Autêntico (403.000+ Palavras)
+Chega da frustração de jogar games de palavras com vocabulário truncado ou restrito a dicionários de Portugal:
+- **Flexões completas**: verbos conjugados em todos os tempos morfológicos (*"cantávamos"*, *"fizeram"*, *"correríamos"*).
+- **Plurais e variações**: diminutivos, aumentativos e formas femininas aceitas naturalmente.
+- **Tolerância total a acentos**: digite com ou sem acento (*"maca"* ou *"maçã"*, *"coracao"* ou *"coração"*). O motor faz normalização inteligente e verificação instantânea em memória $O(1)$.
+- **Sugestões pós-explosão**: quando a batata estoura, a tela exibe exemplos de palavras que serviam para aquela combinação, acabando com as dúvidas na roda!
+
+---
+
+### 🥔 Batata Quente Expressiva e Áudio Procedural
+- **Física e expressões dinâmicas**: à medida que os segundos passam, a batata começa a chiar com vapor quente, a manteiga derrete, gotas de suor escorrem e o rostinho entra em pânico em 4 estágios de tensão (*Calmo*, *Atenção*, *Alerta* e *Pânico*).
+- **Digitação ao vivo (Live Typing)**: todos na sala acompanham as letras sendo digitadas em tempo real pelo jogador da vez.
+- **Áudio 100% Procedural**: efeitos sintetizados na hora via **Web Audio API** — sem arquivos `.mp3` para baixar, com tique-taque dinâmico e explosão realista com sub-bass.
+
+---
+
+### 🎮 Modos de Jogo
+
+| Modo | Descrição |
+| :--- | :--- |
+| 👥 **Multiplayer em Grupo** | Crie ou entre em salas privadas. O Host define o ritmo, número de vidas, ordem da batata e estilo de cronômetro. |
+| ⚔️ **Mata-Mata (Duelo Final)** | Ao restarem os **2 últimos sobreviventes** na arena, ativa-se o duelo final com ritmo acelerado e dificuldade dinâmica! |
+| 🕹️ **Modo Solo (Desafio de Pontos)** | Jogue individualmente testando seus reflexos! Acerte sequências para somar combos, subir de nível, faturar bônus de tempo e bater recordes. |
+| 📺 **Modo TV / Telão** | Ative o botão 📺 para transformar o computador em um painel gigante de sala enquanto todos jogam confortavelmente pelo celular. |
+
+---
+
+### ⚙️ Painel de Configurações da Sala (Host)
+
+Quem cria a sala tem controle total sobre as regras da partida:
+- **Dificuldade dos Prompts**:
+  - `Dinâmica`: começa amigável e esquenta progressivamente com as rodadas.
+  - `Fácil`: termos cotidianos e centenas de opções possíveis.
+  - `Médio`: ótimo equilíbrio entre rapidez e repertório.
+  - `Difícil`: desafiador para quem domina o vocabulário, com piso mínimo calibrado de respostas conhecidas.
+- **Ordem da Batata**:
+  - `Aleatória (Surpresa!)`: a batata pula imprevisivelmente de um jogador para outro.
+  - `Em Círculo (Sequencial)`: turnos organizados em fila circular.
+- **Temporizador da Batata**:
+  - `Aleatório (Invisível)`: tempo secreto sorteado pelo servidor (12s a 22s), onde só a tensão da batata dá pistas do perigo.
+  - `Normal (Fixo)`: contagem constante e previsível a cada rodada.
 
 ---
 
@@ -59,8 +79,15 @@ Quem cria a sala tem controle total sobre as regras antes de iniciar:
 ### Pré-requisitos
 - [Node.js](https://nodejs.org/) instalado (versão 18 ou superior).
 
-### Iniciar com Túnel Público Automático (Recomendado para Jogar com Amigos)
-Executa o jogo e abre o túnel de internet seguro simultaneamente:
+### 1. Clonar e Instalar Dependências
+```bash
+git clone https://github.com/Shuralot/Batatoom.git
+cd Batatoom
+npm install
+```
+
+### 2. Jogar com Amigos pela Internet (Recomendado) 🌐
+Inicia o jogo com hot-reload e abre um **túnel Cloudflare ultraestável** automaticamente, sem precisar abrir portas no roteador:
 
 ```bash
 npm run dev
@@ -69,47 +96,28 @@ npm run dev
 Ao iniciar, o terminal exibirá:
 1. 💻 **Acesso Local (PC):** `http://localhost:3000`
 2. 📱 **Acesso Celular (Wi-Fi):** `http://192.168.x.x:3000`
-3. 🌐 **Link Público da Internet:** `https://xxxx-xxxx.loca.lt` (para amigos em qualquer lugar do mundo!)
-4. 📲 **QR Code no Terminal** gerado diretamente para o link público!
+3. 🌐 **Link Público Cloudflare:** `https://xxxx-xxxx.trycloudflare.com` *(para qualquer amigo jogar de onde estiver!)*
+4. 📲 **QR Code no Terminal:** aponte a câmera do celular para abrir o link na hora!
 
 ---
 
-### Iniciar Apenas Localmente (Rede Wi-Fi Doméstica)
-Se quiser jogar apenas com quem está no mesmo Wi-Fi sem túnel de internet:
+### 3. Jogar Apenas na Rede Local (Wi-Fi Doméstico) 🏠
+Se preferir rodar apenas para os aparelhos conectados no mesmo Wi-Fi sem túnel de internet:
 
 ```bash
 npm start
 ```
 
----
-
-## 🌐 Como Jogar pela Internet com Amigos (Sem Abrir Portas no Roteador)
-
-Para jogar com amigos que não estão na sua casa (fora da sua rede Wi-Fi), você pode gerar um link público seguro em segundos:
-
-### Opção 1: Usando Localtunnel (Recomendado no Windows - Zero Configuração)
-Com o servidor do Batatoom rodando em um terminal, abra outro terminal e execute:
-
+*(Opcional)* Se já iniciou com `npm start` e depois quiser gerar um link público Cloudflare avulso:
 ```bash
 npm run tunnel
-```
-ou:
-```bash
-npx localtunnel --port 3000
-```
-*(Ele gerará na hora uma URL pública HTTPS como `https://sua-sala.loca.lt` para você enviar aos seus amigos!)*
-
-### Opção 2: Usando Cloudflare (`cloudflared`)
-Se tiver o binário oficial do Cloudflare instalado:
-```bash
-cloudflared tunnel --url http://localhost:3000
 ```
 
 ---
 
 ## 🧪 Testes Automatizados
 
-Para executar a suíte de testes de vocabulário, normalização de caracteres e lógica de turnos:
+O projeto conta com uma bateria de 13 testes cobrindo normalização, integridade das mais de 403 mil palavras, balanceamento de prompts, regras de sala e o Modo Solo:
 
 ```bash
 npm test
@@ -120,34 +128,44 @@ npm test
 ## 📁 Estrutura do Projeto
 
 ```
-Kbum/
-├── package.json               # Dependências e scripts de execução
-├── server.js                  # Servidor Express + Socket.IO + IP local & QR Code
+Batatoom/
+├── data/
+│   └── dictionary.json        # Vocabulário compilado em JSON para carga rápida em memória
 ├── pt-br-master/              # Corpus linguístico autêntico PT-BR
-│   ├── lexico                 # 145.744 palavras de referência
-│   ├── conjugações            # 195.751 formas verbais flexionadas
-│   ├── icf                    # 419.486 termos com frequência
-│   └── listas/                # Países, estados, municípios, verbos
+│   ├── lexico                 # 145k+ palavras de referência
+│   ├── conjugações            # 195k+ formas verbais flexionadas
+│   ├── icf                    # 419k+ termos com índices de frequência
+│   └── listas/                # Países, estados, gentílicos e termos regionais
+├── public/                    # Frontend SPA servido pelo Node.js
+│   ├── css/style.css          # Visual arcade moderno, responsivo e animações da batata
+│   ├── js/app.js              # Cliente Socket.IO, controles de tela e feedback tátil (haptics)
+│   ├── js/audio.js            # Sintetizador de efeitos sonoros procedural com Web Audio API
+│   └── index.html             # Interface SPA completa (Lobby, Sala de Espera, Arena e TV)
+├── scripts/
+│   ├── build-dictionary.js    # Compilador e classificador do vocabulário por níveis
+│   └── tunnel.js              # Script de túnel público Cloudflare autônomo
 ├── src/
 │   ├── dictionary.js          # Gerenciador e validador do vocabulário em memória O(1)
+│   ├── gameRoom.js            # Máquina de estados da partida, vidas, combos e Mata-Mata
 │   ├── promptGenerator.js     # Indexador de sílabas e balanceador de dificuldade
-│   ├── gameRoom.js            # Máquina de estados do jogo, vidas e tempo invisível
-│   ├── roomManager.js         # Gerenciamento de salas e desconexões
-│   └── utils.js               # Normalização sem acentos e gerador de códigos
-├── scripts/
-│   └── build-dictionary.js    # Compilador e otimizador do vocabulário
+│   ├── roomManager.js         # Gerenciamento de conexões, salas multiplayer e modo solo
+│   └── utils.js               # Normalização semântica e gerador de códigos de sala
 ├── test/
 │   └── test-game.js           # Bateria de testes automatizados
-└── public/                    # Frontend servido pelo servidor
-    ├── index.html             # Interface SPA completa (Lobby, Sala, Arena, TV)
-    ├── css/
-    │   └── style.css          # Tema arcade moderno, responsivo e animações
-    └── js/
-        ├── audio.js           # Sintetizador procedural com Web Audio API
-        └── app.js             # Cliente Socket.IO, haptics e interatividade
+├── server.js                  # Servidor central Express + Socket.IO + QR Code
+└── package.json               # Dependências e scripts de execução
 ```
 
 ---
 
+## 💡 Dicas para uma Jogatina Perfeita
+
+1. **Jogue na TV da Sala**: Abra o jogo no navegador da TV ou conecte seu notebook via HDMI e clique no botão **Modo TV (📺)** no cabeçalho.
+2. **Entre pelo Celular**: Mostre o QR Code na tela da TV para seus amigos entrarem instantaneamente com os celulares na mão.
+3. **Pense Rápido**: Não perca tempo procurando palavras mirabolantes — a primeira palavra simples do dia a dia que contiver as letras garante a batata fora da sua mão!
+
+---
+
 ## 📜 Licença
-MIT. Divirta-se jogando com seus amigos! 💣🔥
+
+Distribuído sob a licença **MIT**. Divirta-se jogando com seus amigos! 🥔🔥
