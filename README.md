@@ -1,22 +1,20 @@
+<div align="center">
+
 # 🥔💣 Batatoom! — Batata Quente de Palavras
 
-<p align="center">
-  <img src="public/favicon.ico" alt="Batatoom Logo" width="80" height="80" />
-</p>
+**O party game multiplayer em tempo real de vocabulário mais eletrizante do Brasil!**<br>
+Inspirado no clássico *Bomb Party*, reinventado com uma batata quente expressiva e um dicionário autêntico de **mais de 400.000 palavras em Português do Brasil**.
 
-<p align="center">
-  <strong>O party game multiplayer em tempo real de vocabulário mais eletrizante do Brasil!</strong><br>
-  Inspirado no clássico <em>Bomb Party</em>, reinventado com uma batata quente expressiva e um dicionário autêntico de <strong>mais de 400.000 palavras em Português do Brasil</strong>.
-</p>
+<br>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
-  <img src="https://img.shields.io/badge/Socket.IO-Real--Time-010101?style=for-the-badge&logo=socketdotio&logoColor=white" alt="Socket.IO" />
-  <img src="https://img.shields.io/badge/Express-Fast-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express" />
-  <img src="https://img.shields.io/badge/Dicionário-403k+_PT--BR-009c3b?style=for-the-badge" alt="Dicionário PT-BR" />
-  <img src="https://img.shields.io/badge/Túnel-Cloudflare-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare Tunnel" />
-  <img src="https://img.shields.io/badge/Licença-MIT-blue?style=for-the-badge" alt="MIT License" />
-</p>
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Socket.IO](https://img.shields.io/badge/Socket.IO-Real--Time-010101?style=for-the-badge&logo=socketdotio&logoColor=white)](https://socket.io/)
+[![Express](https://img.shields.io/badge/Express-Fast-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
+[![Dicionário PT-BR](https://img.shields.io/badge/Dicionário-403k+_PT--BR-009c3b?style=for-the-badge)](#-principais-recursos-e-diferenciais)
+[![Cloudflare Tunnel](https://img.shields.io/badge/Túnel-Cloudflare-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](#2-jogar-com-amigos-pela-internet-recomendado-)
+[![Licença MIT](https://img.shields.io/badge/Licença-MIT-blue?style=for-the-badge)](LICENSE)
+
+</div>
 
 ---
 
