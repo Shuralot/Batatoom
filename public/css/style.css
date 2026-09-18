@@ -2,6 +2,10 @@
    Batatoom! - ESTILOS ARCADE MODERNOS (MOBILE-FIRST & TV)
    ========================================================================== */
 
+html {
+  font-size: 115%;
+}
+
 :root {
   --bg-main: #0b0f19;
   --bg-card: rgba(22, 29, 47, 0.75);
@@ -902,7 +906,7 @@ body {
   position: absolute;
   right: -4px;
   top: -4px;
-  font-size: 13px;
+  font-size: 15px;
   animation: sparkleSpin 1.4s infinite linear;
 }
 

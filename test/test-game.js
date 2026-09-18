@@ -57,6 +57,9 @@ async function runTests() {
     { input: 'time', expected: true },
     { input: 'show', expected: true },
     { input: 'inconstitucionalidade', expected: true },
+    { input: 'nunca', expected: true },
+    { input: 'quando', expected: true },
+    { input: 'cerca', expected: true },
     // Palavras em inglês que NÃO são do português (devem ser rejeitadas)
     { input: 'look', expected: false },
     { input: 'game', expected: false },

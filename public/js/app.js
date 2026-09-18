@@ -22,6 +22,7 @@
   let qrCodeInstance = null;
   let currentMaxLives = 3;
   let currentRoomSettings = null;
+  let isSoloMode = false;
 
   // Elementos do DOM - Cabeçalho
   const btnToggleSound = document.getElementById('btn-toggle-sound');
@@ -69,6 +70,7 @@
   const hudRoundNumber = document.getElementById('hud-round-number');
   const hudDifficultyBadge = document.getElementById('hud-difficulty-badge');
   const hudTimerBadge = document.getElementById('hud-timer-badge');
+  const hudLivesItem = document.getElementById('hud-lives-item');
   const hudLivesDisplay = document.getElementById('hud-lives-display');
   const tensionHalo = document.getElementById('tension-halo');
   const bombContainer = document.getElementById('bomb-container');
@@ -316,6 +318,9 @@
     // Desbloqueia áudio no primeiro clique
     window.soundEngine.ensureContext();
 
+    isSoloMode = false;
+    if (hudLivesItem) hudLivesItem.style.display = 'none';
+
     socket.emit('join_room', {
       roomCode,
       nickname,
@@ -361,6 +366,8 @@
       const nickname = inputNickname.value.trim() || 'Jogador Solo';
       localStorage.setItem('batatoom_nick', nickname);
       window.soundEngine.ensureContext();
+      isSoloMode = true;
+      if (hudLivesItem) hudLivesItem.style.display = 'flex';
       btnPlaySolo.disabled = true;
       btnPlaySolo.textContent = 'Iniciando Desafio...';
       showScreen(screenGame);
@@ -370,6 +377,8 @@
 
   if (btnPlayAgainSolo) {
     btnPlayAgainSolo.addEventListener('click', () => {
+      isSoloMode = true;
+      if (hudLivesItem) hudLivesItem.style.display = 'flex';
       overlayGameOver.style.display = 'none';
       socket.emit('restart_solo');
     });
@@ -659,6 +668,10 @@
     myPlayerId = player.id;
     currentRoomCode = roomCode;
     isHost = player.isHost;
+    isSoloMode = Boolean(roomState && roomState.isSolo);
+    if (hudLivesItem) {
+      hudLivesItem.style.display = isSoloMode ? 'flex' : 'none';
+    }
 
     displayRoomCode.textContent = roomCode;
     hudRoomCode.textContent = (roomState && roomState.isSolo) ? 'SOLO' : roomCode;
@@ -682,6 +695,13 @@
 
   function handleRoomState(state) {
     if (!state) return;
+
+    if (state.isSolo !== undefined) {
+      isSoloMode = Boolean(state.isSolo);
+    }
+    if (hudLivesItem) {
+      hudLivesItem.style.display = isSoloMode ? 'flex' : 'none';
+    }
 
     currentRoomCode = state.code;
     displayRoomCode.textContent = state.code;
@@ -729,7 +749,7 @@
     if (isHost) {
       hostControls.style.display = 'block';
       guestControls.style.display = 'none';
-      if (!currentRoomData || !currentRoomData.isSolo) {
+      if (!state.isSolo) {
         btnPlayAgain.style.display = 'inline-flex';
       } else {
         btnPlayAgain.style.display = 'none';
@@ -850,6 +870,10 @@
 
     showScreen(screenGame);
 
+    if (data.round === 1 && wordsFeedList) {
+      wordsFeedList.innerHTML = '';
+    }
+
     hudRoundNumber.textContent = data.round;
     updatePrompt(data.prompt, data.difficulty, data.isMataMata, data.mataMataHits);
     updateTensionUI(data.tensionStage || 1);
@@ -862,6 +886,13 @@
       activateMyTurn(data.prompt);
     } else {
       deactivateMyTurn(currentActivePlayerName, false);
+    }
+
+    if (data.isSolo !== undefined) {
+      isSoloMode = Boolean(data.isSolo);
+    }
+    if (hudLivesItem) {
+      hudLivesItem.style.display = isSoloMode ? 'flex' : 'none';
     }
 
     if (data.isSolo) {
@@ -878,6 +909,10 @@
         hudTimerBadge.className = 'badge-diff easy';
         hudTimerBadge.textContent = `⏱️ ${data.timeLeftSec}s`;
       }
+    } else {
+      if (hudSoloScoreItem) hudSoloScoreItem.style.display = 'none';
+      if (hudSoloComboItem) hudSoloComboItem.style.display = 'none';
+      if (hudSoloRecordItem) hudSoloRecordItem.style.display = 'none';
     }
 
     window.soundEngine.startTickLoop(data.tensionStage || 1);
@@ -948,6 +983,22 @@
       lastWordTimeout = setTimeout(() => {
         if (lastWordBanner) lastWordBanner.style.display = 'none';
       }, 3500);
+
+      // Adiciona imediatamente ao feed das últimas palavras aceitas
+      if (wordsFeedList) {
+        const existingTags = Array.from(wordsFeedList.children);
+        const isAlreadyFirst = existingTags.length > 0 && existingTags[0].textContent.includes(data.lastWord.word);
+        if (!isAlreadyFirst) {
+          const tag = document.createElement('div');
+          tag.className = 'feed-word-tag';
+          const highlighted = formatWordWithPromptHighlight(data.lastWord.word, data.lastWord.prompt);
+          tag.innerHTML = `<strong>${highlighted}</strong> <span class="feed-word-author">(${escapeHtml(data.lastWord.player)})</span>`;
+          wordsFeedList.insertBefore(tag, wordsFeedList.firstChild);
+          while (wordsFeedList.children.length > 8) {
+            wordsFeedList.removeChild(wordsFeedList.lastChild);
+          }
+        }
+      }
     }
   });
 
@@ -1244,8 +1295,8 @@
   // =========================================================================
 
   function updateGameView(state) {
-    const currentPlayer = state.players.find(p => p.id === state.currentPlayerId);
-    const me = state.players.find(p => p.id === myPlayerId);
+    const currentPlayer = state.players.find(p => p.id === state.currentPlayerId) || (state.isSolo ? state.players[0] : null);
+    const me = state.players.find(p => p.id === myPlayerId) || (state.isSolo ? state.players[0] : null);
 
     const shouldBeMyTurn = state.isSolo
       ? (me ? me.isAlive : true)
@@ -1253,7 +1304,7 @@
 
     // Nome na bomba com destaque quando é a vez do jogador
     if (currentPlayer) {
-      if (shouldBeMyTurn && !state.isSolo) {
+      if (shouldBeMyTurn) {
         currentPlayerName.innerHTML = `<span style="color: #fbbf24; font-weight: 800; text-shadow: 0 0 10px rgba(251, 191, 36, 0.8);">VOCÊ! 🔥</span>`;
       } else {
         currentPlayerName.textContent = currentPlayer.nickname;
@@ -1282,8 +1333,9 @@
       updatePrompt(state.currentPrompt, state.promptDifficulty, state.isMataMata, state.mataMataHits);
     }
 
-    // Modo Solo HUD
+    // Modo Solo HUD vs Multiplayer HUD
     if (state.isSolo) {
+      if (hudLivesItem) hudLivesItem.style.display = 'flex';
       if (hudSoloScoreItem) hudSoloScoreItem.style.display = 'flex';
       if (hudSoloComboItem) hudSoloComboItem.style.display = 'flex';
       if (hudSoloRecordItem) hudSoloRecordItem.style.display = 'flex';
@@ -1300,6 +1352,7 @@
         pointerTargetName.textContent = 'Desafio Solo de Pontuação! 🥔';
       }
     } else {
+      if (hudLivesItem) hudLivesItem.style.display = 'none';
       if (hudSoloScoreItem) hudSoloScoreItem.style.display = 'none';
       if (hudSoloComboItem) hudSoloComboItem.style.display = 'none';
       if (hudSoloRecordItem) hudSoloRecordItem.style.display = 'none';
@@ -1330,18 +1383,18 @@
     }
 
     // Barra de Jogadores com Vidas
-    renderGamePlayers(state.players, state.currentPlayerId);
+    renderGamePlayers(state.players, state.currentPlayerId, Boolean(state.isSolo));
 
     // Feed de Palavras
     renderWordsFeed(state.wordHistory);
   }
 
-  function renderGamePlayers(players, currentId) {
+  function renderGamePlayers(players, currentId, isSolo = isSoloMode) {
     const container = circlePlayersContainer || document.getElementById('circle-players-container');
     if (!container || !players || players.length === 0) return;
 
     container.innerHTML = '';
-    const activePlayer = players.find(p => p.id === currentId);
+    const activePlayer = players.find(p => p.id === currentId) || (isSolo ? players[0] : null);
 
     // Sinergia: Se o turno mudou para um novo jogador, dispara áudio e arremesso da batata
     if (lastActivePlayerId !== null && lastActivePlayerId !== currentId && currentId) {
@@ -1413,6 +1466,9 @@
       // Corações proporcionais à regra de vidas da sala (❤️ vivas e 💔 quebradas/escuras)
       const heartsHtml = getHeartsHtml(p.lives, currentMaxLives);
 
+      // No modo singleplayer, não exibe o contador de vidas abaixo do ícone do jogador
+      const seatLivesHtml = isSolo ? '' : `<span class="seat-lives">${heartsHtml}</span>`;
+
       // Badge flutuante indicativo de turno
       let turnBadge = '';
       if (isTurn) {
@@ -1434,7 +1490,7 @@
           ${hostTag}
         </div>
         <span class="seat-name">${nameLabel}</span>
-        <span class="seat-lives">${heartsHtml}</span>
+        ${seatLivesHtml}
       `;
       container.appendChild(card);
     });

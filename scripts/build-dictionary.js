@@ -111,9 +111,9 @@ const STOPWORDS = new Set([
   // Termos em espanhol que não pertencem ao português
   'perro', 'perros', 'malo', 'malos', 'nino', 'ninos', 'nina', 'ninas',
   'gracias', 'adios', 'hombre', 'hombres', 'mujer', 'mujeres',
-  'noche', 'noches', 'hoy', 'ayer', 'siempre', 'nunca',
-  'donde', 'quando', 'quien', 'pero', 'arriba', 'abajo',
-  'cerca', 'lejos', 'bienvenido', 'bienvenidos',
+  'noche', 'noches', 'hoy', 'ayer', 'siempre',
+  'donde', 'quien', 'pero', 'arriba', 'abajo',
+  'lejos', 'bienvenido', 'bienvenidos',
 
   // Arcanismos bizarros, OCR e corruptelas do lexico antigo
   'abachuchu', 'ababaloalo', 'aabora', 'aavora', 'abafanetico', 'abajurdio',
