@@ -45,7 +45,10 @@ class GameRoom {
     this.settings = {
       difficulty: 'dinamico', // 'facil', 'medio', 'dificil', 'dinamico'
       turnOrder: 'aleatorio',  // 'aleatorio', 'circular'
-      timerType: 'aleatorio'   // 'aleatorio', 'normal'
+      timerType: 'aleatorio',  // 'aleatorio', 'rapido', 'normal', 'lento'
+      mataMata: 'ativado',     // 'ativado', 'desativado'
+      initialLives: 3,         // 1, 2, 3, 5
+      minWordLength: 2         // 2, 3, 4, 5
     };
 
     // Temporizador Invisível da Batata
@@ -157,8 +160,21 @@ class GameRoom {
     if (newSettings.turnOrder && ['aleatorio', 'circular'].includes(newSettings.turnOrder)) {
       this.settings.turnOrder = newSettings.turnOrder;
     }
-    if (newSettings.timerType && ['aleatorio', 'normal'].includes(newSettings.timerType)) {
+    if (newSettings.timerType && ['aleatorio', 'rapido', 'normal', 'lento'].includes(newSettings.timerType)) {
       this.settings.timerType = newSettings.timerType;
+    }
+    if (newSettings.mataMata && ['ativado', 'desativado'].includes(newSettings.mataMata)) {
+      this.settings.mataMata = newSettings.mataMata;
+    }
+    if (newSettings.initialLives && [1, 2, 3, 5].includes(Number(newSettings.initialLives))) {
+      this.settings.initialLives = Number(newSettings.initialLives);
+      // Atualiza vidas de quem estiver aguardando na sala
+      for (const p of this.players.values()) {
+        p.lives = this.settings.initialLives;
+      }
+    }
+    if (newSettings.minWordLength && [2, 3, 4, 5].includes(Number(newSettings.minWordLength))) {
+      this.settings.minWordLength = Number(newSettings.minWordLength);
     }
 
     this.broadcastRoomState();
@@ -177,7 +193,7 @@ class GameRoom {
     const player = {
       id: socketId,
       nickname: cleanNick,
-      lives: INITIAL_LIVES,
+      lives: this.settings.initialLives || INITIAL_LIVES,
       score: 0,
       isHost: isHost || this.players.size === 0,
       avatarColor,
@@ -221,7 +237,8 @@ class GameRoom {
     // Se a partida está em andamento
     if (this.status === 'playing') {
       const alivePlayers = this.getAlivePlayers();
-      this.isMataMata = (alivePlayers.length === 2);
+      const allowMataMata = (this.settings.mataMata !== 'desativado');
+      this.isMataMata = allowMataMata && (alivePlayers.length === 2);
 
       if (alivePlayers.length <= 1) {
         this.endGame();
@@ -262,8 +279,9 @@ class GameRoom {
     }
 
     // Reset geral dos jogadores
+    const startLives = this.settings.initialLives || INITIAL_LIVES;
     for (const p of playerList) {
-      p.lives = INITIAL_LIVES;
+      p.lives = startLives;
       p.score = 0;
       p.isAlive = true;
       p.wordsCount = 0;
@@ -320,8 +338,9 @@ class GameRoom {
       const soloInfo = this.getSoloLevelInfo();
       this.bombTotalTimeMs = soloInfo.baseTimeMs;
     } else {
-      // Mata-Mata: ativado exclusivamente quando sobram exatamente 2 players vivos
-      this.isMataMata = (alivePlayers.length === 2);
+      // Mata-Mata: ativado quando sobram exatamente 2 players vivos (se habilitado nas configurações)
+      const allowMataMata = (this.settings.mataMata !== 'desativado');
+      this.isMataMata = allowMataMata && (alivePlayers.length === 2);
 
     const aliveIds = alivePlayers.map(p => p.id);
 
@@ -361,8 +380,12 @@ class GameRoom {
     if (this.isMataMata) {
       const baseMataMataTime = Math.max(7000, 16000 - this.mataMataHits * 750);
       this.bombTotalTimeMs = baseMataMataTime;
+    } else if (this.settings.timerType === 'rapido') {
+      this.bombTotalTimeMs = 10000;
     } else if (this.settings.timerType === 'normal') {
-      this.bombTotalTimeMs = 18000;
+      this.bombTotalTimeMs = 16000;
+    } else if (this.settings.timerType === 'lento') {
+      this.bombTotalTimeMs = 24000;
     } else {
       const baseMin = Math.max(14000, 18000 - this.roundCount * 300);
       const baseMax = Math.max(20000, 26000 - this.roundCount * 400);
@@ -602,8 +625,9 @@ class GameRoom {
 
     // Limpa pontuações acidentais nas bordas (ex: "casa.", "gato!", quotes)
     const trimmed = rawWord.trim().replace(/^[^a-zA-Z\u00C0-\u017F]+|[^a-zA-Z\u00C0-\u017F]+$/g, '');
-    if (trimmed.length < 2) {
-      return { success: false, reason: 'A palavra deve ter pelo menos 2 letras!' };
+    const minLength = this.settings.minWordLength || 2;
+    if (trimmed.length < minLength) {
+      return { success: false, reason: `A palavra deve ter pelo menos ${minLength} letras!` };
     }
 
     const normalized = normalizeWord(trimmed);
@@ -638,16 +662,35 @@ class GameRoom {
     const wordDiff = check.difficulty;
     this.usedWords.add(normalized);
 
-    // Pontuação: base por comprimento + bônus de complexidade/vocabulário
-    let wordPoints = 10 + Math.max(0, displayWord.length - 3) * 2;
+    // Pontuação: base por comprimento + bônus substancial de complexidade/dificuldade
+    let basePoints = 10 + Math.max(0, displayWord.length - 3) * 2;
+    let diffBonusPoints = 0;
+    let diffMultiplier = 1.0;
+    let baseTimeBonus = this.isMataMata ? 0.5 : 1.0;
+    let extraTimeBonus = 0;
+    let bonusReason = '';
+
     if (wordDiff) {
-      if (wordDiff.level === 'mestre') wordPoints += 15;
-      else if (wordDiff.level === 'dificil') wordPoints += 8;
-      else if (wordDiff.level === 'medio') wordPoints += 3;
+      if (wordDiff.level === 'mestre') {
+        diffBonusPoints = 50;
+        diffMultiplier = 1.5;
+        extraTimeBonus = this.isMataMata ? 2.0 : 3.0;
+        bonusReason = 'Palavra Mestre! 💎';
+      } else if (wordDiff.level === 'dificil') {
+        diffBonusPoints = 25;
+        diffMultiplier = 1.25;
+        extraTimeBonus = this.isMataMata ? 1.0 : 1.5;
+        bonusReason = 'Vocabulário Rico! ⚡';
+      } else if (wordDiff.level === 'medio') {
+        diffBonusPoints = 8;
+        diffMultiplier = 1.0;
+        extraTimeBonus = this.isMataMata ? 0.3 : 0.5;
+        bonusReason = 'Boa Palavra! ✨';
+      }
     }
 
-    let timeBonusSeconds = 1.0;
-    let bonusReason = '';
+    let wordPoints = Math.round((basePoints + diffBonusPoints) * diffMultiplier);
+    let timeBonusSeconds = parseFloat((baseTimeBonus + extraTimeBonus).toFixed(1));
 
     if (this.isSolo) {
       this.soloCombo++;
@@ -657,34 +700,37 @@ class GameRoom {
       const soloInfo = this.getSoloLevelInfo();
 
       // Bônus base do nível
-      let baseBonus = soloInfo.bonusSec;
-      let extraBonus = 0;
+      let soloBase = soloInfo.bonusSec;
+      let soloExtra = 0;
 
-      // Recompensa por vocabulário amplo e raridade da palavra
+      // Recompensa generosa por vocabulário amplo e raridade da palavra
       if (wordDiff && wordDiff.level === 'mestre') {
-        extraBonus += 1.5;
-        bonusReason = 'Palavra Rara! 💎';
+        soloExtra += 3.5;
+        bonusReason = 'Palavra Mestre! 💎';
       } else if (wordDiff && wordDiff.level === 'dificil') {
-        extraBonus += 0.8;
+        soloExtra += 2.0;
         bonusReason = 'Vocabulário Rico! ⚡';
+      } else if (wordDiff && wordDiff.level === 'medio') {
+        soloExtra += 0.8;
+        bonusReason = 'Boa Palavra! ✨';
       } else if (displayWord.length >= 9) {
-        extraBonus += 1.5;
+        soloExtra += 1.5;
         bonusReason = 'Palavra Longa! 🌟';
       } else if (displayWord.length >= 7) {
-        extraBonus += 1.0;
+        soloExtra += 1.0;
         bonusReason = 'Boa Palavra! ✨';
       }
 
       // Recompensa por sequência de acertos (combo)
       if (this.soloCombo >= 10) {
-        extraBonus += 1.0;
+        soloExtra += 1.5;
         bonusReason = bonusReason ? `${bonusReason} + Super Combo! 🔥` : 'Super Combo! 🔥';
       } else if (this.soloCombo >= 5) {
-        extraBonus += 0.5;
+        soloExtra += 0.8;
         bonusReason = bonusReason ? `${bonusReason} + Combo! 🔥` : 'Combo! 🔥';
       }
 
-      timeBonusSeconds = parseFloat((baseBonus + extraBonus).toFixed(1));
+      timeBonusSeconds = parseFloat((soloBase + soloExtra).toFixed(1));
 
       // Acumula tempo na batata com teto de até 45 segundos para manter uma run longa!
       const MAX_SOLO_TIME_MS = 45000;
@@ -706,7 +752,6 @@ class GameRoom {
 
       this.currentTensionStage = newStage;
     } else {
-      timeBonusSeconds = this.isMataMata ? 0.5 : 1.0;
       const timeBonusMs = Math.round(timeBonusSeconds * 1000);
       this.bombEndTime += timeBonusMs;
       this.bombTotalTimeMs += timeBonusMs;
@@ -782,7 +827,7 @@ class GameRoom {
     }
 
     // Avança para o próximo jogador (cada um joga 1x por rodada no multiplayer)
-    this.advanceTurn(true, historyItem);
+    this.advanceTurn(true, historyItem, timeBonusSeconds, bonusReason);
 
     return {
       success: true,
@@ -790,11 +835,12 @@ class GameRoom {
       points: wordPoints,
       prompt: answeredPrompt,
       timeBonus: timeBonusSeconds,
+      bonusReason: bonusReason,
       difficulty: wordDiff
     };
   }
 
-  advanceTurn(successfulPass = true, lastWordItem = null) {
+  advanceTurn(successfulPass = true, lastWordItem = null, timeBonus = 1.0, bonusReason = '') {
     if (this.roundQueue.length === 0) return;
 
     this.currentQueueIndex++;
@@ -822,7 +868,8 @@ class GameRoom {
       turnCount: this.turnCount,
       isMataMata: this.isMataMata,
       mataMataHits: this.mataMataHits,
-      timeBonus: this.isMataMata ? 0.5 : 1.0
+      timeBonus: timeBonus,
+      bonusReason: bonusReason
     });
 
     this.broadcastRoomState();
@@ -902,8 +949,9 @@ class GameRoom {
     }
 
     this.status = 'waiting';
+    const startLives = this.settings.initialLives || INITIAL_LIVES;
     for (const p of this.players.values()) {
-      p.lives = INITIAL_LIVES;
+      p.lives = startLives;
       p.score = 0;
       p.isAlive = true;
       p.wordsCount = 0;
@@ -934,6 +982,7 @@ class GameRoom {
       code: this.code,
       status: this.status,
       hostId: this.hostSocketId,
+      maxLives: this.settings.initialLives || INITIAL_LIVES,
       isSolo: this.isSolo,
       soloCombo: this.soloCombo,
       maxSoloCombo: this.maxSoloCombo,

@@ -156,7 +156,40 @@
               <label for="setting-timer-type">⏱️ Tempo da Batata:</label>
               <select id="setting-timer-type" class="setting-select">
                 <option value="aleatorio">🕵️ Aleatório (Tempo Secreto)</option>
-                <option value="normal">⏳ Normal (15s Fixo)</option>
+                <option value="rapido">⚡ Rápido (~10s Fixo)</option>
+                <option value="normal">⏳ Normal (~16s Fixo)</option>
+                <option value="lento">🧘 Relax (~24s Fixo)</option>
+              </select>
+            </div>
+
+            <!-- Modo Mata-Mata -->
+            <div class="setting-item">
+              <label for="setting-mata-mata">⚔️ Modo Mata-Mata:</label>
+              <select id="setting-mata-mata" class="setting-select">
+                <option value="ativado">⚔️ Ativado (Duelo final dinâmico)</option>
+                <option value="desativado">🛡️ Desativado (Sem duelo acelerado)</option>
+              </select>
+            </div>
+
+            <!-- Vidas Iniciais -->
+            <div class="setting-item">
+              <label for="setting-lives">❤️ Vidas Iniciais:</label>
+              <select id="setting-lives" class="setting-select">
+                <option value="3">❤️ 3 Vidas (Padrão)</option>
+                <option value="1">⚡ 1 Vida (Morte Súbita)</option>
+                <option value="2">✌️ 2 Vidas (Rápido)</option>
+                <option value="5">💖 5 Vidas (Maratona Longa)</option>
+              </select>
+            </div>
+
+            <!-- Mínimo de Letras -->
+            <div class="setting-item">
+              <label for="setting-min-word-length">🔤 Mínimo de Letras:</label>
+              <select id="setting-min-word-length" class="setting-select">
+                <option value="2">🟢 Livre (A partir de 2 letras)</option>
+                <option value="3">🟡 Mínimo 3 Letras</option>
+                <option value="4">🔴 Mínimo 4 Letras (Sem curtinhas)</option>
+                <option value="5">🔥 Mínimo 5 Letras (Mestre)</option>
               </select>
             </div>
           </div>
@@ -212,19 +245,8 @@
         </div>
       </div>
 
-      <!-- ARENA CENTRAL (BATATA QUENTE E PROMPT) -->
-      <div class="potato-arena">
-        <!-- Halo de Calor da Batata -->
-        <div id="tension-halo" class="tension-halo tension-stage-1"></div>
-
-        <!-- Seta Indicadora de Turno (aponta dinamicamente para o jogador) -->
-        <div id="turn-pointer-arrow" class="turn-pointer-arrow">
-          <div class="pointer-arrow-content">
-            <span class="arrow-glyph">👉</span>
-            <span id="pointer-target-name" class="arrow-text">É a vez de Fulano!</span>
-          </div>
-        </div>
-
+      <!-- ARENA CENTRAL EM RODA DE AMIGOS (A BATATA NO CENTRO E JOGADORES AO REDOR) -->
+      <div class="friends-circle-wrapper">
         <!-- BANNER DE MATA-MATA (DUELO FINAL) -->
         <div id="matamata-banner" class="matamata-banner" style="display: none;">
           <span class="fire-icon pulse">🔥⚔️</span>
@@ -232,52 +254,10 @@
           <span id="matamata-level" class="matamata-level-badge">NÍVEL 1</span>
         </div>
 
-        <!-- A BATATA QUENTE -->
-        <div id="bomb-container" class="potato-container wobble-stage-1">
-          <!-- Vapor e Fumaça Quente -->
-          <div class="steam-wrapper">
-            <span class="steam-particle s1">♨️</span>
-            <span class="steam-particle s2">♨️</span>
-            <span class="steam-particle s3">♨️</span>
-          </div>
-
-          <!-- Manteiga derretendo -->
-          <div class="butter-melt"></div>
-
-          <!-- Corpo Oval da Batata Quente -->
-          <div id="bomb-body" class="potato-body">
-            <!-- Detalhes da Casca da Batata -->
-            <div class="potato-spots">
-              <span class="spot sp1"></span>
-              <span class="spot sp2"></span>
-              <span class="spot sp3"></span>
-            </div>
-
-            <!-- Olhinhos expressivos da batata -->
-            <div class="potato-face">
-              <span id="potato-expression" class="face-emoji">😅</span>
-            </div>
-
-            <!-- O Prompt Central (Sílabas / Letras) -->
-            <div class="prompt-box">
-              <div class="prompt-label">CONTÉM:</div>
-              <div id="display-prompt" class="prompt-letters">---</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Indicador de Vez -->
+        <!-- Banner de Indicação de Turno -->
         <div id="turn-announcement" class="turn-announcement">
           <span class="turn-tag">🥔 BATATA COM:</span>
           <span id="current-player-name" class="turn-name">Aguardando...</span>
-        </div>
-
-        <!-- DIGITAÇÃO EM TEMPO REAL NO CENTRO DA ARENA -->
-        <div id="live-typing-display" class="live-typing-display">
-          <span class="live-typing-tag">⌨️ DIGITANDO:</span>
-          <div class="live-typing-bubble">
-            <span id="live-typing-letters" class="live-typing-letters">_</span>
-          </div>
         </div>
 
         <!-- BANNER DE PALAVRA ACEITA COM SÍLABA DESTACADA EM VERDE -->
@@ -286,53 +266,138 @@
           <span id="last-word-author" class="last-word-author"></span>
           <span id="last-word-highlighted" class="last-word-highlighted"></span>
         </div>
-      </div>
 
-      <!-- JOGADORES ESPALHADOS AO REDOR COM SETA APONTANDO -->
-      <div id="game-players-bar" class="game-players-spread">
-        <!-- Renderizado dinamicamente espalhado com cards grandes, vidas e seta -->
-      </div>
+        <!-- A MESA CIRCULAR DO JOGO -->
+        <div class="potato-arena" id="potato-arena">
+          <!-- Anéis Decorativos da Mesa de Jogo -->
+          <div class="table-surface-ring"></div>
+          <div class="table-inner-glow"></div>
 
-      <!-- PAINEL DE AÇÃO DO JOGADOR (MOBILE-FIRST) -->
-      <div id="player-action-dock" class="player-action-dock">
-        <!-- Visão Quando for a sua vez -->
-        <div id="my-turn-panel" class="my-turn-panel" style="display: none;">
-          <div class="turn-banner">
-            <span class="turn-badge-pulse">⚡ SUA VEZ! DIGITE RÁPIDO! ⚡</span>
-          </div>
-          <form id="form-word-submit" class="word-form">
-            <div class="word-input-container">
-              <input 
-                type="text" 
-                id="input-word" 
-                class="input-word"
-                placeholder="Digite uma palavra..." 
-                autocomplete="off" 
-                autocorrect="off" 
-                autocapitalize="characters" 
-                spellcheck="false"
-                maxlength="25"
-              >
-              <button type="submit" id="btn-submit-word" class="btn-submit">
-                <span>ENVIAR</span> 💥
-              </button>
+          <!-- Halo de Calor da Batata -->
+          <div id="tension-halo" class="tension-halo tension-stage-1"></div>
+
+          <!-- SETA GIRATÓRIA DE ENERGIA/FOGO APONTANDO DO CENTRO PARA O JOGADOR DA VEZ -->
+          <div id="turn-compass-arrow" class="turn-compass-arrow">
+            <div class="compass-arrow-shaft">
+              <span class="arrow-energy-stream"></span>
             </div>
-          </form>
-          <div id="feedback-message" class="feedback-message"></div>
-        </div>
+            <div class="compass-arrow-head">
+              <div class="arrow-svg-wrap">
+                <svg viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18 0L35 34L18 26L1 34L18 0Z" fill="url(#flameGrad)" />
+                  <defs>
+                    <linearGradient id="flameGrad" x1="18" y1="0" x2="18" y2="34" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#fff" />
+                      <stop offset="0.25" stop-color="#fbbf24" />
+                      <stop offset="0.75" stop-color="#f97316" />
+                      <stop offset="1" stop-color="#ef4444" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+              <span class="arrow-sparkle">✨</span>
+            </div>
+          </div>
 
-        <!-- Visão Quando for a vez de outro jogador -->
-        <div id="other-turn-panel" class="other-turn-panel">
-          <p id="waiting-other-msg" class="waiting-other-msg">
+          <!-- A BATATA QUENTE (CENTRO EXATO DA RODA) -->
+          <div id="bomb-container" class="potato-container wobble-stage-1">
+            <!-- Vapor e Fumaça Quente -->
+            <div class="steam-wrapper">
+              <span class="steam-particle s1">♨️</span>
+              <span class="steam-particle s2">♨️</span>
+              <span class="steam-particle s3">♨️</span>
+            </div>
+
+            <!-- Manteiga derretendo -->
+            <div class="butter-melt"></div>
+
+            <!-- Corpo Oval da Batata Quente -->
+            <div id="bomb-body" class="potato-body">
+              <!-- Detalhes da Casca da Batata -->
+              <div class="potato-spots">
+                <span class="spot sp1"></span>
+                <span class="spot sp2"></span>
+                <span class="spot sp3"></span>
+              </div>
+
+              <!-- Olhinhos expressivos da batata -->
+              <div class="potato-face">
+                <span id="potato-expression" class="face-emoji">😅</span>
+              </div>
+
+              <!-- O Prompt Central (Sílabas / Letras) -->
+              <div class="prompt-box">
+                <div class="prompt-label">CONTÉM:</div>
+                <div id="display-prompt" class="prompt-letters">---</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- JOGADORES DISPOSTOS EM RODA AO REDOR DA BATATA -->
+          <div id="circle-players-container" class="circle-players-container">
+            <!-- Cards dos jogadores renderizados dinamicamente em coordenadas polares -->
+          </div>
+        </div>
+      </div>
+
+      <!-- TOAST DE TURNO IMERSIVO (SURGE RAPIDAMENTE QUANDO É A VEZ DO JOGADOR) -->
+      <div id="turn-toast" class="turn-toast" style="display: none;">
+        <span class="turn-toast-icon">🥔🔥</span>
+        <span class="turn-toast-text">A BATATA É SUA! DIGITE RÁPIDO!</span>
+      </div>
+
+      <!-- PAINEL UNIFICADO DE DIGITAÇÃO E TRANSMISSÃO EM TEMPO REAL -->
+      <div id="player-action-dock" class="player-action-dock">
+        <!-- Banner de Status Adaptativo -->
+        <div class="turn-banner">
+          <!-- Visão: Sua Vez -->
+          <span id="turn-badge-my" class="turn-badge-pulse" style="display: none;">
+            ⚡ SUA VEZ! A BATATA ESTÁ COM VOCÊ! ⚡
+          </span>
+          <!-- Visão: Vez de Outro Jogador / Espectador -->
+          <div id="turn-badge-other" class="turn-badge-spectator">
             <span class="pulse-dot"></span>
-            Aguarde sua vez! A bomba está passando...
-          </p>
+            <span id="waiting-other-msg">Aguarde sua vez! A bomba está passando...</span>
+          </div>
         </div>
 
-        <!-- Visão Espectador / Eliminado -->
-        <div id="eliminated-panel" class="eliminated-panel" style="display: none;">
-          <p class="eliminated-msg">💀 Você foi eliminado nesta partida! Assista ao desfecho dos sobreviventes.</p>
-        </div>
+        <!-- Formulário e Container Central de Digitação / Visualização -->
+        <form id="form-word-submit" class="word-form">
+          <div class="word-input-container">
+            <!-- Campo Editável (ativo quando for a sua vez) -->
+            <input 
+              type="text" 
+              id="input-word" 
+              class="input-word"
+              placeholder="Digite uma palavra..." 
+              autocomplete="off" 
+              autocorrect="off" 
+              autocapitalize="characters" 
+              spellcheck="false"
+              maxlength="25"
+            >
+
+            <!-- Display Espelho em Tempo Real (ativo quando NÃO for a sua vez) -->
+            <div id="live-typing-display" class="live-spectator-box" style="display: none;">
+              <span id="live-typing-letters" class="live-typing-letters">
+                <span class="empty-placeholder">Aguardando letras...</span>
+              </span>
+            </div>
+
+            <!-- Botão de Envio (ativo na sua vez) -->
+            <button type="submit" id="btn-submit-word" class="btn-submit">
+              <span>ENVIAR</span> 💥
+            </button>
+
+            <!-- Distintivo do Espectador (ativo na vez de outros) -->
+            <div id="spectator-status-badge" class="spectator-status-badge" style="display: none;">
+              <span class="badge-potato-icon">🥔</span>
+              <span id="spectator-badge-label">EM JOGO</span>
+            </div>
+          </div>
+        </form>
+
+        <div id="feedback-message" class="feedback-message"></div>
       </div>
 
       <!-- FEED DAS ÚLTIMAS PALAVRAS VÁLIDAS -->

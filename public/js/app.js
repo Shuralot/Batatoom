@@ -20,6 +20,8 @@
   let isHost = false;
   let isMyTurn = false;
   let qrCodeInstance = null;
+  let currentMaxLives = 3;
+  let currentRoomSettings = null;
 
   // Elementos do DOM - Cabeçalho
   const btnToggleSound = document.getElementById('btn-toggle-sound');
@@ -57,6 +59,9 @@
   const settingDifficulty = document.getElementById('setting-difficulty');
   const settingTurnOrder = document.getElementById('setting-turn-order');
   const settingTimerType = document.getElementById('setting-timer-type');
+  const settingMataMata = document.getElementById('setting-mata-mata');
+  const settingLives = document.getElementById('setting-lives');
+  const settingMinWordLength = document.getElementById('setting-min-word-length');
   const settingsRoleTag = document.getElementById('settings-role-tag');
 
   // Arena de Jogo
@@ -68,12 +73,16 @@
   const bombContainer = document.getElementById('bomb-container');
   const displayPrompt = document.getElementById('display-prompt');
   const currentPlayerName = document.getElementById('current-player-name');
-  const turnPointerArrow = document.getElementById('turn-pointer-arrow');
+  const turnCompassArrow = document.getElementById('turn-compass-arrow');
+  const circlePlayersContainer = document.getElementById('circle-players-container') || document.getElementById('game-players-bar');
+  const turnPointerArrow = document.getElementById('turn-pointer-arrow') || turnCompassArrow;
   const pointerTargetName = document.getElementById('pointer-target-name');
   const matamataBanner = document.getElementById('matamata-banner');
   const matamataLevel = document.getElementById('matamata-level');
   const potatoExpression = document.getElementById('potato-expression');
-  const gamePlayersBar = document.getElementById('game-players-bar');
+  const gamePlayersBar = circlePlayersContainer;
+  let currentArrowDeg = 0;
+  let lastActivePlayerId = null;
   const wordsFeedList = document.getElementById('words-feed-list');
   const liveTypingDisplay = document.getElementById('live-typing-display');
   const liveTypingLetters = document.getElementById('live-typing-letters');
@@ -108,15 +117,19 @@
     return `${escapeHtml(before)}<span class="matched-prompt-green">${escapeHtml(matched)}</span>${escapeHtml(after)}`;
   }
 
-  // Ação do Jogador (Mobile-First)
-  const myTurnPanel = document.getElementById('my-turn-panel');
-  const otherTurnPanel = document.getElementById('other-turn-panel');
-  const eliminatedPanel = document.getElementById('eliminated-panel');
+  // Ação do Jogador (Dock Unificado: Input na sua vez / Espelho ao vivo na vez de outros)
+  const playerActionDock = document.getElementById('player-action-dock');
+  const turnToast = document.getElementById('turn-toast');
+  const turnBadgeMy = document.getElementById('turn-badge-my');
+  const turnBadgeOther = document.getElementById('turn-badge-other');
+  const spectatorStatusBadge = document.getElementById('spectator-status-badge');
+  const spectatorBadgeLabel = document.getElementById('spectator-badge-label');
   const formWordSubmit = document.getElementById('form-word-submit');
   const inputWord = document.getElementById('input-word');
   const btnSubmitWord = document.getElementById('btn-submit-word');
   const feedbackMessage = document.getElementById('feedback-message');
   const waitingOtherMsg = document.getElementById('waiting-other-msg');
+  let currentActivePlayerName = '';
 
   // Overlays
   const overlayCountdown = document.getElementById('overlay-countdown');
@@ -326,13 +339,19 @@
     socket.emit('update_settings', {
       difficulty: settingDifficulty.value,
       turnOrder: settingTurnOrder.value,
-      timerType: settingTimerType.value
+      timerType: settingTimerType.value,
+      mataMata: settingMataMata ? settingMataMata.value : 'ativado',
+      initialLives: settingLives ? Number(settingLives.value) : 3,
+      minWordLength: settingMinWordLength ? Number(settingMinWordLength.value) : 2
     });
   }
 
   settingDifficulty.addEventListener('change', emitSettingsChange);
   settingTurnOrder.addEventListener('change', emitSettingsChange);
   settingTimerType.addEventListener('change', emitSettingsChange);
+  if (settingMataMata) settingMataMata.addEventListener('change', emitSettingsChange);
+  if (settingLives) settingLives.addEventListener('change', emitSettingsChange);
+  if (settingMinWordLength) settingMinWordLength.addEventListener('change', emitSettingsChange);
 
   // =========================================================================
   // ENVIO DE PALAVRA E AÇÕES DO JOGADOR
@@ -413,26 +432,20 @@
     if (!liveTypingLetters) return;
 
     if (!text || text.trim().length === 0) {
-      liveTypingLetters.innerHTML = `<span class="empty-placeholder">Aguardando letras...</span>`;
-      if (liveTypingTag) liveTypingTag.textContent = author ? `DIGITANDO (${author}):` : 'DIGITANDO:';
+      const who = (author && author !== 'Você') ? author : (currentActivePlayerName || 'o jogador');
+      liveTypingLetters.innerHTML = `<span class="empty-placeholder">Aguardando ${escapeHtml(who)} digitar...</span>`;
       return;
     }
 
-    if (liveTypingTag) {
-      liveTypingTag.textContent = author ? `DIGITANDO (${author}):` : 'DIGITANDO:';
-    }
-
-    // Se já tiver a sílaba na palavra digitada, ela já fica verde em tempo real!
-    liveTypingLetters.innerHTML = formatWordWithPromptHighlight(text, prompt);
+    // Exibe letras em tempo real com destaque na sílaba correspondente e cursor piscante
+    liveTypingLetters.innerHTML = formatWordWithPromptHighlight(text, prompt) + '<span class="typing-cursor">|</span>';
   }
 
   function clearLiveTyping() {
     inputWord.value = '';
     if (liveTypingLetters) {
-      liveTypingLetters.innerHTML = `<span class="empty-placeholder">Aguardando letras...</span>`;
-    }
-    if (liveTypingTag) {
-      liveTypingTag.textContent = 'DIGITANDO:';
+      const who = currentActivePlayerName || 'o jogador';
+      liveTypingLetters.innerHTML = `<span class="empty-placeholder">Aguardando ${escapeHtml(who)} digitar...</span>`;
     }
   }
 
@@ -445,6 +458,41 @@
     }
   }
 
+  // Gerenciamento de Notificação de Aba no Navegador
+  let originalDocumentTitle = document.title;
+  let tabBlinkTimer = null;
+
+  function notifyBrowserTabTurn() {
+    if (document.hidden) {
+      let blink = false;
+      if (tabBlinkTimer) clearInterval(tabBlinkTimer);
+      tabBlinkTimer = setInterval(() => {
+        document.title = blink ? '🔥 SUA VEZ! 🥔' : '💥 A BATATA VAI EXPLODIR!';
+        blink = !blink;
+      }, 800);
+    }
+  }
+
+  function resetBrowserTabTitle() {
+    if (tabBlinkTimer) {
+      clearInterval(tabBlinkTimer);
+      tabBlinkTimer = null;
+    }
+    document.title = originalDocumentTitle;
+  }
+
+  window.addEventListener('focus', () => {
+    resetBrowserTabTitle();
+    if (isMyTurn) autoFocusInput();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && isMyTurn) {
+      resetBrowserTabTitle();
+      autoFocusInput();
+    }
+  });
+
   // Foco automático inteligente no campo de digitação no celular
   function autoFocusInput() {
     if (isMyTurn) {
@@ -454,6 +502,104 @@
         inputWord.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 50);
     }
+  }
+
+  // Ativação e Desativação Imersiva de Turno do Jogador
+  let wasCurrentlyMyTurn = false;
+  let turnToastTimeout = null;
+
+  function activateMyTurn(promptText) {
+    const isNewTurnArrival = !wasCurrentlyMyTurn;
+    isMyTurn = true;
+    wasCurrentlyMyTurn = true;
+
+    // Modo Ativo: Mostra o input e o botão de envio
+    inputWord.style.display = 'block';
+    if (btnSubmitWord) btnSubmitWord.style.display = 'flex';
+    if (liveTypingDisplay) liveTypingDisplay.style.display = 'none';
+    if (spectatorStatusBadge) spectatorStatusBadge.style.display = 'none';
+
+    if (turnBadgeMy) turnBadgeMy.style.display = 'inline-block';
+    if (turnBadgeOther) turnBadgeOther.style.display = 'none';
+
+    if (playerActionDock) {
+      playerActionDock.classList.add('is-my-turn');
+      playerActionDock.classList.remove('is-spectator-mode');
+    }
+
+    const p = promptText || activePrompt;
+    const minLen = (currentRoomSettings && currentRoomSettings.minWordLength) ? currentRoomSettings.minWordLength : 2;
+    const minHint = (minLen > 2) ? ` (mín. ${minLen} letras)` : '';
+    if (p) {
+      inputWord.placeholder = `🔥 Digite com "${p}"${minHint}...`;
+    } else {
+      inputWord.placeholder = `🔥 Sua vez! Digite uma palavra${minHint}...`;
+    }
+
+    // Ações acionadas apenas no momento em que a batata chega nas mãos
+    if (isNewTurnArrival) {
+      window.soundEngine.playTurnAlert();
+      vibrate([120, 60, 120]);
+
+      if (turnToast) {
+        turnToast.style.display = 'flex';
+        if (turnToastTimeout) clearTimeout(turnToastTimeout);
+        turnToastTimeout = setTimeout(() => {
+          if (turnToast) turnToast.style.display = 'none';
+        }, 2000);
+      }
+    }
+
+    autoFocusInput();
+    notifyBrowserTabTurn();
+  }
+
+  function deactivateMyTurn(activePlayerName = '', isEliminated = false) {
+    isMyTurn = false;
+    wasCurrentlyMyTurn = false;
+
+    // Modo Espectador: O campo se transforma no espelho em tempo real
+    inputWord.style.display = 'none';
+    if (btnSubmitWord) btnSubmitWord.style.display = 'none';
+    if (liveTypingDisplay) liveTypingDisplay.style.display = 'flex';
+    if (spectatorStatusBadge) spectatorStatusBadge.style.display = 'flex';
+
+    if (turnBadgeMy) turnBadgeMy.style.display = 'none';
+    if (turnBadgeOther) turnBadgeOther.style.display = 'inline-flex';
+
+    if (playerActionDock) {
+      playerActionDock.classList.remove('is-my-turn');
+      playerActionDock.classList.add('is-spectator-mode');
+    }
+
+    if (turnToast) {
+      turnToast.style.display = 'none';
+      if (turnToastTimeout) {
+        clearTimeout(turnToastTimeout);
+        turnToastTimeout = null;
+      }
+    }
+
+    const who = activePlayerName || currentActivePlayerName || 'Jogador';
+    if (spectatorBadgeLabel) {
+      spectatorBadgeLabel.textContent = isEliminated ? 'ELIMINADO' : `COM ${escapeHtml(who).toUpperCase()}`;
+    }
+
+    if (waitingOtherMsg) {
+      if (isEliminated) {
+        waitingOtherMsg.innerHTML = `<span class="pulse-dot"></span> 💀 Você foi eliminado — Vez de <strong>${escapeHtml(who)}</strong>:`;
+      } else {
+        waitingOtherMsg.innerHTML = `<span class="pulse-dot"></span> Vez de <strong>${escapeHtml(who)}</strong> — Digitando:`;
+      }
+    }
+
+    // Se o display ao vivo estiver vazio, exibe o placeholder de aguardo com o nome do jogador
+    if (liveTypingLetters && (!liveTypingLetters.textContent || liveTypingLetters.querySelector('.empty-placeholder'))) {
+      liveTypingLetters.innerHTML = `<span class="empty-placeholder">Aguardando ${escapeHtml(who)} digitar...</span>`;
+    }
+
+    inputWord.placeholder = 'Digite uma palavra...';
+    resetBrowserTabTitle();
   }
 
   // =========================================================================
@@ -496,6 +642,9 @@
     // Verifica se sou host
     isHost = (state.hostId === myPlayerId);
 
+    currentRoomSettings = state.settings || null;
+    currentMaxLives = state.maxLives || (state.settings && state.settings.initialLives) || 3;
+
     // Atualiza opções de regras na sala de espera
     if (state.settings) {
       if (document.activeElement !== settingDifficulty) {
@@ -507,9 +656,24 @@
       if (document.activeElement !== settingTimerType) {
         settingTimerType.value = state.settings.timerType || 'aleatorio';
       }
+      if (settingMataMata && document.activeElement !== settingMataMata) {
+        settingMataMata.value = state.settings.mataMata || 'ativado';
+      }
+      if (settingLives && document.activeElement !== settingLives) {
+        settingLives.value = String(state.settings.initialLives || 3);
+      }
+      if (settingMinWordLength && document.activeElement !== settingMinWordLength) {
+        settingMinWordLength.value = String(state.settings.minWordLength || 2);
+      }
 
       if (hudTimerBadge) {
-        hudTimerBadge.textContent = state.settings.timerType === 'normal' ? 'NORMAL (15s)' : 'ALEATÓRIO';
+        const timerLabels = {
+          aleatorio: 'ALEATÓRIO',
+          rapido: 'RÁPIDO (10s)',
+          normal: 'NORMAL (16s)',
+          lento: 'RELAX (24s)'
+        };
+        hudTimerBadge.textContent = timerLabels[state.settings.timerType] || 'ALEATÓRIO';
       }
     }
 
@@ -523,6 +687,9 @@
       settingDifficulty.disabled = false;
       settingTurnOrder.disabled = false;
       settingTimerType.disabled = false;
+      if (settingMataMata) settingMataMata.disabled = false;
+      if (settingLives) settingLives.disabled = false;
+      if (settingMinWordLength) settingMinWordLength.disabled = false;
       settingsRoleTag.textContent = '(Você é o Anfitrião - Altere como quiser)';
       settingsRoleTag.style.color = '#34d399';
     } else {
@@ -534,6 +701,9 @@
       settingDifficulty.disabled = true;
       settingTurnOrder.disabled = true;
       settingTimerType.disabled = true;
+      if (settingMataMata) settingMataMata.disabled = true;
+      if (settingLives) settingLives.disabled = true;
+      if (settingMinWordLength) settingMinWordLength.disabled = true;
       settingsRoleTag.textContent = '(Definido pelo Anfitrião da sala)';
       settingsRoleTag.style.color = '#94a3b8';
     }
@@ -635,20 +805,11 @@
     if (lastWordBanner) lastWordBanner.style.display = 'none';
 
     const isCurrent = data.isSolo || (data.currentPlayer && data.currentPlayer.id === myPlayerId);
+    currentActivePlayerName = data.currentPlayer ? data.currentPlayer.nickname : '';
     if (isCurrent) {
-      isMyTurn = true;
-      myTurnPanel.style.display = 'block';
-      otherTurnPanel.style.display = 'none';
-      eliminatedPanel.style.display = 'none';
-      autoFocusInput();
+      activateMyTurn(data.prompt);
     } else {
-      isMyTurn = false;
-      myTurnPanel.style.display = 'none';
-      otherTurnPanel.style.display = 'block';
-      eliminatedPanel.style.display = 'none';
-      if (data.currentPlayer) {
-        waitingOtherMsg.innerHTML = `<span class="pulse-dot"></span> É a vez de <strong>${escapeHtml(data.currentPlayer.nickname)}</strong> responder...`;
-      }
+      deactivateMyTurn(currentActivePlayerName, false);
     }
 
     if (data.isSolo) {
@@ -689,20 +850,11 @@
     clearLiveTyping();
 
     const isCurrent = data.isSolo || (data.nextPlayer && data.nextPlayer.id === myPlayerId);
+    currentActivePlayerName = data.nextPlayer ? data.nextPlayer.nickname : '';
     if (isCurrent) {
-      isMyTurn = true;
-      myTurnPanel.style.display = 'block';
-      otherTurnPanel.style.display = 'none';
-      eliminatedPanel.style.display = 'none';
-      autoFocusInput();
+      activateMyTurn(data.prompt);
     } else {
-      isMyTurn = false;
-      myTurnPanel.style.display = 'none';
-      otherTurnPanel.style.display = 'block';
-      eliminatedPanel.style.display = 'none';
-      if (data.nextPlayer) {
-        waitingOtherMsg.innerHTML = `<span class="pulse-dot"></span> É a vez de <strong>${escapeHtml(data.nextPlayer.nickname)}</strong> responder...`;
-      }
+      deactivateMyTurn(currentActivePlayerName, false);
     }
 
     if (data.isSolo) {
@@ -845,6 +997,7 @@
 
   // Bomba Explodiu!
   socket.on('bomb_exploded', ({ victim, prompt, examples }) => {
+    deactivateMyTurn();
     window.soundEngine.playExplosion();
     vibrate([300, 100, 300]);
     clearLiveTyping();
@@ -875,6 +1028,7 @@
 
   // Fim de Jogo
   socket.on('game_over', (data) => {
+    deactivateMyTurn();
     window.soundEngine.playVictory();
     vibrate([100, 50, 100, 50, 300]);
 
@@ -932,6 +1086,8 @@
 
   // Reset do Lobby
   socket.on('lobby_reset', () => {
+    deactivateMyTurn();
+    lastActivePlayerId = null;
     overlayGameOver.style.display = 'none';
     overlayExplosion.style.display = 'none';
     showScreen(screenWaiting);
@@ -952,41 +1108,35 @@
     const currentPlayer = state.players.find(p => p.id === state.currentPlayerId);
     const me = state.players.find(p => p.id === myPlayerId);
 
-    // Nome na bomba
+    const shouldBeMyTurn = state.isSolo
+      ? (me ? me.isAlive : true)
+      : (state.currentPlayerId === myPlayerId && me && me.isAlive);
+
+    // Nome na bomba com destaque quando é a vez do jogador
     if (currentPlayer) {
-      currentPlayerName.textContent = currentPlayer.nickname;
+      if (shouldBeMyTurn && !state.isSolo) {
+        currentPlayerName.innerHTML = `<span style="color: #fbbf24; font-weight: 800; text-shadow: 0 0 10px rgba(251, 191, 36, 0.8);">VOCÊ! 🔥</span>`;
+      } else {
+        currentPlayerName.textContent = currentPlayer.nickname;
+      }
     }
 
-    if (state.isSolo) {
-      isMyTurn = me ? me.isAlive : true;
-    } else {
-      isMyTurn = (state.currentPlayerId === myPlayerId && me && me.isAlive);
-    }
+    // Painéis de Ação do Jogador com ativação imersiva de turno
+    const currentActiveNick = currentPlayer ? currentPlayer.nickname : '';
+    currentActivePlayerName = currentActiveNick;
 
-    // Painéis de Ação do Jogador
     if (state.isSolo) {
-      myTurnPanel.style.display = isMyTurn ? 'block' : 'none';
-      otherTurnPanel.style.display = 'none';
-      eliminatedPanel.style.display = (me && !me.isAlive) ? 'block' : 'none';
-      if (isMyTurn) {
-        autoFocusInput();
+      if (shouldBeMyTurn) {
+        activateMyTurn(state.currentPrompt);
+      } else {
+        deactivateMyTurn(currentActiveNick, me && !me.isAlive);
       }
     } else if (!me || !me.isAlive) {
-      myTurnPanel.style.display = 'none';
-      otherTurnPanel.style.display = 'none';
-      eliminatedPanel.style.display = 'block';
-    } else if (isMyTurn) {
-      myTurnPanel.style.display = 'block';
-      otherTurnPanel.style.display = 'none';
-      eliminatedPanel.style.display = 'none';
-      autoFocusInput();
+      deactivateMyTurn(currentActiveNick, true);
+    } else if (shouldBeMyTurn) {
+      activateMyTurn(state.currentPrompt);
     } else {
-      myTurnPanel.style.display = 'none';
-      otherTurnPanel.style.display = 'block';
-      eliminatedPanel.style.display = 'none';
-      if (currentPlayer) {
-        waitingOtherMsg.innerHTML = `<span class="pulse-dot"></span> É a vez de <strong>${escapeHtml(currentPlayer.nickname)}</strong> responder...`;
-      }
+      deactivateMyTurn(currentActiveNick, false);
     }
 
     if (state.currentPrompt && (!activePrompt || activePrompt !== state.currentPrompt)) {
@@ -1042,37 +1192,124 @@
   }
 
   function renderGamePlayers(players, currentId) {
-    gamePlayersBar.innerHTML = '';
+    const container = circlePlayersContainer || document.getElementById('circle-players-container');
+    if (!container || !players || players.length === 0) return;
+
+    container.innerHTML = '';
     const activePlayer = players.find(p => p.id === currentId);
 
-    if (pointerTargetName && activePlayer) {
-      pointerTargetName.textContent = `A batata está com ${activePlayer.nickname}! 🥔`;
+    // Sinergia: Se o turno mudou para um novo jogador, dispara áudio e arremesso da batata
+    if (lastActivePlayerId !== null && lastActivePlayerId !== currentId && currentId) {
+      if (bombContainer) {
+        bombContainer.classList.remove('potato-pass-bounce');
+        void bombContainer.offsetWidth; // Reflow para reiniciar a animação
+        bombContainer.classList.add('potato-pass-bounce');
+      }
+      const isMe = (currentId === myPlayerId);
+      if (window.soundEngine && typeof window.soundEngine.playTurnPass === 'function') {
+        window.soundEngine.playTurnPass(isMe);
+      }
+    }
+    lastActivePlayerId = currentId;
+
+    if (currentPlayerName && activePlayer) {
+      if (activePlayer.id === myPlayerId) {
+        currentPlayerName.innerHTML = `<span style="color: #fbbf24; font-weight: 800; text-shadow: 0 0 10px rgba(251, 191, 36, 0.8);">VOCÊ! 🔥</span>`;
+      } else {
+        currentPlayerName.textContent = activePlayer.nickname;
+      }
     }
 
-    players.forEach(p => {
+    if (pointerTargetName && activePlayer) {
+      if (activePlayer.id === myPlayerId) {
+        pointerTargetName.textContent = '🔥 A BATATA ESTÁ NAS SUAS MÃOS! DIGITE RÁPIDO! 🔥';
+      } else {
+        pointerTargetName.textContent = `A batata está com ${activePlayer.nickname}! 🥔`;
+      }
+    }
+
+    // Identifica o índice do jogador local para orientar a mesa ("Você" na base para melhor ergonomia)
+    let myIndex = players.findIndex(p => p.id === myPlayerId);
+    if (myIndex === -1) myIndex = 0;
+
+    const total = players.length;
+    // Quando são 2 jogadores: esquerda (180°) e direita (0°)
+    // Quando são 3 ou mais: usuário na base (90°) e os amigos distribuídos em círculo
+    const startAngle = (total === 2) ? 180 : 90;
+
+    // Raio da elipse em porcentagem do diâmetro da mesa
+    const rx = 40;
+    const ry = 36;
+
+    let activeAngleDeg = null;
+
+    players.forEach((p, i) => {
       const isTurn = (p.id === currentId);
+      const isMe = (p.id === myPlayerId);
+      const isMyTurnCard = (isTurn && isMe);
+
+      // Ângulo em graus desta posição na roda
+      const angleDeg = (startAngle + (i - myIndex) * (360 / total)) % 360;
+      if (isTurn) {
+        activeAngleDeg = angleDeg;
+      }
+
+      const rad = (angleDeg * Math.PI) / 180;
+      const posX = 50 + rx * Math.cos(rad);
+      const posY = 50 + ry * Math.sin(rad);
+
       const card = document.createElement('div');
-      card.className = `player-spread-card ${isTurn ? 'is-active-turn' : ''} ${!p.isAlive ? 'is-dead' : ''}`;
+      card.className = `circle-player-seat ${isTurn ? 'is-active-turn' : ''} ${isMyTurnCard ? 'is-my-card-active' : ''} ${!p.isAlive ? 'is-dead' : ''}`;
+      card.style.left = `${posX}%`;
+      card.style.top = `${posY}%`;
 
       const initial = p.nickname.charAt(0).toUpperCase();
 
-      // Corações
+      // Corações proporcionais à regra de vidas da sala
       let heartsHtml = '';
-      for (let i = 0; i < 3; i++) {
-        heartsHtml += (i < p.lives) ? '❤️' : '🖤';
+      const totalHearts = currentMaxLives || 3;
+      for (let h = 0; h < totalHearts; h++) {
+        heartsHtml += (h < p.lives) ? '❤️' : '🖤';
       }
 
-      // Seta animada apontando para o jogador que está com a batata quente
-      const arrowBadge = isTurn ? `<div class="player-turn-arrow-badge" title="Com a Batata!">👇</div>` : '';
+      // Badge flutuante indicativo de turno
+      let turnBadge = '';
+      if (isTurn) {
+        turnBadge = isMe
+          ? `<div class="seat-turn-badge" title="Sua vez!">⚡ SUA VEZ! ⚡</div>`
+          : `<div class="seat-turn-badge" title="Com a Batata!">🥔 VEZ DELE</div>`;
+      }
+
+      const hostTag = p.isHost ? `<span class="seat-host-tag" title="Anfitrião">👑</span>` : '';
+
+      const nameLabel = isMe
+        ? `${escapeHtml(p.nickname)} <small style="color: #fbbf24; font-size: 0.8em;">(Você)</small>`
+        : escapeHtml(p.nickname);
 
       card.innerHTML = `
-        ${arrowBadge}
-        <div class="card-avatar" style="background-color: ${p.avatarColor || '#3b82f6'}">${initial}</div>
-        <span class="card-name">${escapeHtml(p.nickname)}</span>
-        <span class="card-lives">${heartsHtml}</span>
+        ${turnBadge}
+        <div class="seat-avatar-wrapper">
+          <div class="seat-avatar" style="background-color: ${p.avatarColor || '#3b82f6'}">${initial}</div>
+          ${hostTag}
+        </div>
+        <span class="seat-name">${nameLabel}</span>
+        <span class="seat-lives">${heartsHtml}</span>
       `;
-      gamePlayersBar.appendChild(card);
+      container.appendChild(card);
     });
+
+    // Rotação dinâmica da Seta Giratória Central apontando diretamente para o jogador da vez
+    if (turnCompassArrow) {
+      if (activeAngleDeg !== null && total > 1) {
+        turnCompassArrow.style.display = 'block';
+        // Rotação suave no menor arco angular para manter a física do giro fluida
+        let diff = (activeAngleDeg - (currentArrowDeg % 360) + 540) % 360 - 180;
+        currentArrowDeg += diff;
+        turnCompassArrow.style.transform = `rotate(${currentArrowDeg}deg)`;
+      } else {
+        turnCompassArrow.style.display = 'none';
+      }
+    }
   }
 
   function renderWordsFeed(history) {

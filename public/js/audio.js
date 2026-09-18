@@ -201,6 +201,73 @@ class SoundEngine {
   }
 
   /**
+   * Som de Troca de Turno: Quem joga a batata faz um 'whoosh' dinâmico no ar!
+   * Se for a vez do usuário, toca um chime metálico alegre avisando 'A batata é sua!'.
+   */
+  playTurnPass(isMyTurn = false) {
+    if (this.isMuted) return;
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+
+    // 1. Whoosh do arremesso da batata (ruído modulado com filtro passa-banda)
+    try {
+      const bufferSize = Math.floor(ctx.sampleRate * 0.22);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const bandpass = ctx.createBiquadFilter();
+      bandpass.type = 'bandpass';
+      bandpass.Q.setValueAtTime(3.0, now);
+      bandpass.frequency.setValueAtTime(350, now);
+      bandpass.frequency.exponentialRampToValueAtTime(1100, now + 0.09);
+      bandpass.frequency.exponentialRampToValueAtTime(250, now + 0.21);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.01, now);
+      gain.gain.linearRampToValueAtTime(0.28, now + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+      noise.connect(bandpass);
+      bandpass.connect(gain);
+      gain.connect(ctx.destination);
+
+      noise.start(now);
+      noise.stop(now + 0.22);
+    } catch (e) {
+      // Fallback gracioso
+    }
+
+    // 2. Se for a vez do próprio jogador: Chime metálico brilhante
+    if (isMyTurn) {
+      const notes = [659.25, 987.77]; // E5, B5
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const startTime = now + 0.06 + (idx * 0.08);
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, startTime);
+
+        gain.gain.setValueAtTime(0.18, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.35);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(startTime);
+        osc.stop(startTime + 0.36);
+      });
+    }
+  }
+
+  /**
    * Som de Explosão: Ruído branco filtrado + sub-grave estrondoso
    */
   playExplosion() {
@@ -320,6 +387,72 @@ class SoundEngine {
       osc.start(noteTime);
       osc.stop(noteTime + note.d + 0.05);
     });
+  }
+
+  /**
+   * Som de Alerta de Turno: Batata quente caindo nas mãos do jogador!
+   * Efeito enérgico, quente e inconfundível (Pop + Chime duplo agudo).
+   */
+  playTurnAlert() {
+    if (this.isMuted) return;
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+
+    // 1. Chime duplo de atenção (E5 -> B5 -> E6 arpejo curto e cintilante)
+    const tones = [
+      { f: 659.25, time: 0, dur: 0.12, type: 'triangle' },
+      { f: 987.77, time: 0.06, dur: 0.14, type: 'sine' },
+      { f: 1318.51, time: 0.12, dur: 0.22, type: 'sine' }
+    ];
+
+    tones.forEach(t => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      const startTime = now + t.time;
+      osc.type = t.type;
+      osc.frequency.setValueAtTime(t.f, startTime);
+
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.35, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + t.dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(startTime);
+      osc.stop(startTime + t.dur + 0.02);
+    });
+
+    // 2. Ruído quente de impacto/pegar a batata (woosh/catch)
+    try {
+      const bufferSize = Math.floor(ctx.sampleRate * 0.08);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1400, now);
+      filter.Q.setValueAtTime(3.0, now);
+
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.2, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+
+      noise.start(now);
+    } catch (_) {}
   }
 }
 

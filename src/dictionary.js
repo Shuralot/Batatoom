@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const { normalizeWord, containsPrompt } = require('./utils');
-const { buildDictionary } = require('../scripts/build-dictionary');
+const { buildDictionary, STOPWORDS } = require('../scripts/build-dictionary');
 
 const DICT_PATH = path.join(__dirname, '..', 'data', 'dictionary.json');
 
@@ -152,6 +152,16 @@ class Dictionary {
     const normalized = normalizeWord(cleaned);
     if (!normalized || normalized.length < 2) {
       return { valid: false, normalized: '', display: '' };
+    }
+
+    // Exigência de vogal: toda palavra autêntica do português contém ao menos uma vogal
+    if (!/[aeiou]/.test(normalized)) {
+      return { valid: false, normalized, display: cleaned };
+    }
+
+    // Rejeita termos da lista negra (palavras em inglês, espanhol, abreviações e corruptelas)
+    if (STOPWORDS && STOPWORDS.has(normalized)) {
+      return { valid: false, normalized, display: cleaned };
     }
 
     let valid = this.wordsSet.has(normalized);

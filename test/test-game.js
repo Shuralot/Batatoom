@@ -40,6 +40,7 @@ async function runTests() {
   console.log('4. Testando palavras flexionadas, plurais e sem acento...');
   
   const testWords = [
+    // Palavras autênticas do português
     { input: 'maçã', expected: true },
     { input: 'maca', expected: true },
     { input: 'coração', expected: true },
@@ -49,6 +50,49 @@ async function runTests() {
     { input: 'fizeram', expected: true },
     { input: 'computador', expected: true },
     { input: 'palavras', expected: true },
+    { input: 'celular', expected: true },
+    { input: 'internet', expected: true },
+    { input: 'site', expected: true },
+    { input: 'blog', expected: true },
+    { input: 'time', expected: true },
+    { input: 'show', expected: true },
+    { input: 'inconstitucionalidade', expected: true },
+    // Palavras em inglês que NÃO são do português (devem ser rejeitadas)
+    { input: 'look', expected: false },
+    { input: 'game', expected: false },
+    { input: 'play', expected: false },
+    { input: 'food', expected: false },
+    { input: 'boy', expected: false },
+    { input: 'girl', expected: false },
+    { input: 'book', expected: false },
+    { input: 'door', expected: false },
+    { input: 'run', expected: false },
+    { input: 'drink', expected: false },
+    // Municípios e países aglutinados sem espaço (devem ser rejeitados)
+    { input: 'saopaulo', expected: false },
+    { input: 'riodejaneiro', expected: false },
+    { input: 'altaflorestadoeste', expected: false },
+    { input: 'estadosunidos', expected: false },
+    { input: 'alfredowagner', expected: false },
+    // Siglas, abreviações e palavras sem vogal (devem ser rejeitadas)
+    { input: 'vlw', expected: false },
+    { input: 'fdp', expected: false },
+    { input: 'mds', expected: false },
+    { input: 'https', expected: false },
+    { input: 'rpm', expected: false },
+    { input: 'adj', expected: false },
+    { input: 'adv', expected: false },
+    // Termos em espanhol, ofensas estrangeiras e termos que obviamente nem existem (devem ser rejeitados)
+    { input: 'perro', expected: false },
+    { input: 'malo', expected: false },
+    { input: 'bellend', expected: false },
+    { input: 'bollok', expected: false },
+    { input: 'ababaloalo', expected: false },
+    { input: 'aabora', expected: false },
+    { input: 'abafanetico', expected: false },
+    { input: 'abachuchu', expected: false },
+    { input: 'aa', expected: false },
+    { input: 'ãã', expected: false },
     { input: 'asdfghjklqwerty', expected: false },
     { input: 'blablabla123', expected: false }
   ];
@@ -61,7 +105,7 @@ async function runTests() {
       `Falha na validação da palavra "${item.input}". Esperado: ${item.expected}, Obtido: ${res.valid}`
     );
   }
-  console.log('   ✅ Palavras flexionadas e normalizadas verificadas com 100% de sucesso.');
+  console.log('   ✅ Palavras autênticas aceitas e termos inválidos/estrangeiros rejeitados com 100% de sucesso.');
 
   // TESTE 5: Gerador de Prompts e Níveis de Dificuldade
   console.log('5. Testando indexação de prompts...');
@@ -126,7 +170,7 @@ async function runTests() {
   assert.strictEqual(validRes.success, true);
   assert.ok(validRes.points >= 10);
   assert.ok(validRes.prompt, 'Deve retornar o prompt respondido');
-  assert.strictEqual(validRes.timeBonus, 1.0, 'Deve conceder bônus de 1.0s no jogo normal');
+  assert.ok(validRes.timeBonus >= 1.0, 'Deve conceder bônus de pelo menos 1.0s no jogo normal');
   assert.strictEqual(room.usedWords.has(normalizeWord(validWord)), true);
 
   // Tentativa de repetir a mesma palavra na mesma rodada deve ser rejeitada
@@ -193,7 +237,7 @@ async function runTests() {
   const mmWord = mmExamples[0];
   const mmRes = roomMM.submitWord(mmPlayer.id, mmWord);
   assert.strictEqual(mmRes.success, true);
-  assert.strictEqual(mmRes.timeBonus, 0.5, 'Deve conceder bônus de 0.5s no Mata-Mata');
+  assert.ok(mmRes.timeBonus >= 0.5, 'Deve conceder bônus de pelo menos 0.5s no Mata-Mata');
   assert.strictEqual(roomMM.mataMataHits, 1, 'Mata-Mata hits deve ser 1 após acerto');
 
   if (roomMM.bombTimerInterval) clearInterval(roomMM.bombTimerInterval);
@@ -305,12 +349,12 @@ async function runTests() {
   const listMestre = dictionary.getWordsByLevel('mestre');
 
   assert.ok(listFacil.length >= 10000, 'Nível fácil deve conter vocabulário cotidiano robusto');
-  assert.ok(listMedio.length >= 50000, 'Nível médio deve conter vocabulário intermediário');
+  assert.ok(listMedio.length >= 40000, 'Nível médio deve conter vocabulário intermediário');
   assert.ok(listDificil.length >= 100000, 'Nível difícil deve conter termos avançados e flexões');
   assert.ok(listMestre.length >= 50000, 'Nível mestre deve conter termos extensos e complexos');
 
   const stats = dictionary.getDifficultyStats();
-  assert.ok(stats && stats.totalWords > 400000);
+  assert.ok(stats && stats.totalWords > 200000);
   assert.ok(stats.counts.facil > 0);
 
   // Verificação de exemplos que priorizam cotidiano
@@ -321,6 +365,79 @@ async function runTests() {
   }
 
   console.log('   ✅ Classificação em níveis de dificuldade e particionamento validados com 100% de sucesso.');
+
+  // TESTE 14: Novas Opções de Configuração da Sala (Desativar Mata-Mata, Vidas Iniciais, Mínimo de Letras, Timer)
+  console.log('14. Testando configurações avançadas da sala (desativar mata-mata, vidas, minWordLength e timer)...');
+  const roomConfig = new GameRoom('CONFIG_TEST', mockIo);
+  roomConfig.addPlayer('host_cfg', 'Host Master', true);
+  roomConfig.addPlayer('p2_cfg', 'Player 2', false);
+
+  // 14.1 Host altera opções
+  const cfgRes = roomConfig.updateSettings('host_cfg', {
+    mataMata: 'desativado',
+    initialLives: 5,
+    minWordLength: 4,
+    timerType: 'rapido'
+  });
+  assert.strictEqual(cfgRes.success, true);
+  assert.strictEqual(roomConfig.settings.mataMata, 'desativado');
+  assert.strictEqual(roomConfig.settings.initialLives, 5);
+  assert.strictEqual(roomConfig.settings.minWordLength, 4);
+  assert.strictEqual(roomConfig.settings.timerType, 'rapido');
+
+  // Vidas foram atualizadas na sala de espera para 5
+  assert.strictEqual(roomConfig.getPlayer('host_cfg').lives, 5);
+  assert.strictEqual(roomConfig.getPlayer('p2_cfg').lives, 5);
+
+  // 14.2 Inicia o jogo com mata-mata desativado e 2 jogadores
+  roomConfig.startGame('host_cfg');
+  roomConfig.startRound();
+  assert.strictEqual(roomConfig.isMataMata, false, 'Com mata-mata desativado, isMataMata deve ser false mesmo com 2 jogadores');
+  assert.strictEqual(roomConfig.bombTotalTimeMs, 10000, 'Timer rápido deve configurar 10000ms de tempo total');
+
+  // 14.3 Valida restrição de tamanho mínimo de palavra (minWordLength: 4)
+  const cfgCurPlayer = roomConfig.getCurrentPlayer();
+  const shortPrompt = roomConfig.currentPrompt;
+  // Tenta enviar palavra com 2 ou 3 letras que contenha o prompt (ou mockando a validação)
+  const shortTry = roomConfig.submitWord(cfgCurPlayer.id, 'sol');
+  assert.strictEqual(shortTry.success, false);
+  assert.ok(shortTry.reason.includes('4 letras'), 'Deve rejeitar palavras com menos de 4 letras quando configurado');
+
+  if (roomConfig.bombTimerInterval) clearInterval(roomConfig.bombTimerInterval);
+  console.log('   ✅ Novas opções de configuração da sala validadas com 100% de sucesso.');
+
+  // TESTE 15: Recompensa de Palavras Difíceis e Mestre (Pontuações Altas e Mais Tempo)
+  console.log('15. Testando alta pontuação e bônus de tempo extra para palavras difíceis e complexas...');
+  const roomDiff = new GameRoom('DIFF_TEST', mockIo);
+  roomDiff.addPlayer('p_diff1', 'Jogador 1', true);
+  roomDiff.addPlayer('p_diff2', 'Jogador 2', false);
+  roomDiff.addPlayer('p_diff3', 'Jogador 3', false);
+  roomDiff.startGame('p_diff1');
+  roomDiff.startRound();
+
+  const curPlayerDiff = roomDiff.getCurrentPlayer();
+
+  // Submissão de palavra Difícil: perspicaz (prompt "AZ")
+  roomDiff.currentPrompt = 'AZ';
+  const resDificil = roomDiff.submitWord(curPlayerDiff.id, 'perspicaz');
+  assert.strictEqual(resDificil.success, true);
+  assert.strictEqual(resDificil.difficulty.level, 'dificil');
+  assert.ok(resDificil.points >= 50, `Palavra difícil deve gerar pontuação alta (>= 50). Obtido: ${resDificil.points}`);
+  assert.strictEqual(resDificil.timeBonus, 2.5, `Palavra difícil no multiplayer deve dar 2.5s de bônus. Obtido: ${resDificil.timeBonus}`);
+  assert.strictEqual(resDificil.bonusReason, 'Vocabulário Rico! ⚡');
+
+  // Submissão de palavra Mestre: inconstitucionalidade (prompt "CION")
+  const nextPlayerDiff = roomDiff.getCurrentPlayer();
+  roomDiff.currentPrompt = 'CION';
+  const resMestre = roomDiff.submitWord(nextPlayerDiff.id, 'inconstitucionalidade');
+  assert.strictEqual(resMestre.success, true);
+  assert.strictEqual(resMestre.difficulty.level, 'mestre');
+  assert.ok(resMestre.points >= 100, `Palavra mestre deve gerar pontuação muito alta (>= 100). Obtido: ${resMestre.points}`);
+  assert.strictEqual(resMestre.timeBonus, 4.0, `Palavra mestre no multiplayer deve dar 4.0s de bônus. Obtido: ${resMestre.timeBonus}`);
+  assert.strictEqual(resMestre.bonusReason, 'Palavra Mestre! 💎');
+
+  if (roomDiff.bombTimerInterval) clearInterval(roomDiff.bombTimerInterval);
+  console.log('   ✅ Palavras difíceis e mestre geram altas pontuações e concedem mais tempo validado com sucesso.');
 
   console.log('\n🎉 TODOS OS TESTES PASSARAM COM SUCESSO! 💣\n');
   process.exit(0);

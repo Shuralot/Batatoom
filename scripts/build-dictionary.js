@@ -39,6 +39,130 @@ const VALID_2_LETTER_WORDS = new Set([
   'se', 'si', 'so', 'te', 'ti', 'tu', 'um', 'va', 've', 'vi'
 ]);
 
+// Lista negra curada de palavras estrangeiras, abreviações, siglas e termos inexistentes
+const STOPWORDS = new Set([
+  // Termos comuns em inglês que vazam de textos e corpora da web
+  'look', 'looks', 'looking', 'game', 'games', 'play', 'plays', 'playing',
+  'food', 'foods', 'boy', 'boys', 'girl', 'girls', 'book', 'books',
+  'door', 'doors', 'run', 'running', 'drink', 'drinks', 'drinking',
+  'dog', 'dogs', 'cat', 'cats', 'tree', 'trees', 'house', 'houses',
+  'water', 'waters', 'how', 'slow', 'wow', 'view', 'views', 'know',
+  'fast', 'open', 'opened', 'opening', 'close', 'closed', 'closing',
+  'break', 'breaks', 'breaking', 'stop', 'stops', 'stopping',
+  'start', 'starts', 'starting', 'life', 'love', 'loves', 'loving',
+  'work', 'works', 'working', 'city', 'phone', 'phones', 'car', 'cars',
+  'bus', 'train', 'trains', 'plane', 'planes', 'boat', 'boats',
+  'window', 'windows', 'table', 'tables', 'chair', 'chairs',
+  'bed', 'beds', 'room', 'rooms', 'walk', 'walks', 'walking',
+  'eat', 'eats', 'eating', 'read', 'reads', 'reading',
+  'write', 'writes', 'writing', 'speak', 'speaks', 'speaking',
+  'listen', 'listens', 'listening', 'watch', 'watches', 'watching',
+  'see', 'sees', 'seeing', 'hear', 'hears', 'hearing',
+  'smell', 'smells', 'taste', 'tastes', 'touch', 'touches',
+  'feel', 'feels', 'feeling', 'think', 'thinks', 'thinking',
+  'understand', 'remember', 'forget', 'learn', 'teach',
+  'buy', 'buys', 'buying', 'sell', 'sells', 'selling',
+  'pay', 'pays', 'paying', 'cost', 'costs', 'help', 'helps',
+  'ask', 'asks', 'asking', 'answer', 'answers', 'wait', 'waits',
+  'stay', 'stays', 'leave', 'leaves', 'arrive', 'arrives',
+  'return', 'returns', 'finish', 'begin', 'end', 'ends',
+  'win', 'wins', 'winning', 'lose', 'loses', 'losing',
+  'fall', 'falls', 'rise', 'rises', 'fix', 'build',
+  'black', 'baby', 'babies', 'background', 'backgrounds',
+  'backbone', 'backhand', 'backlight', 'backside',
+  'basketball', 'audiobook', 'audiobooks', 'blackjack',
+  'benchmark', 'benchmarks', 'benchmarking',
+  'night', 'nights', 'morning', 'mornings', 'mother', 'mothers',
+  'father', 'fathers', 'brother', 'brothers', 'sister', 'sisters',
+  'friend', 'friends', 'death', 'money', 'people', 'world', 'school',
+  'good', 'bad', 'small', 'big', 'great', 'long', 'short',
+  'high', 'low', 'young', 'old', 'new', 'right', 'left', 'next',
+  'about', 'after', 'again', 'all', 'also', 'always', 'any',
+  'because', 'before', 'best', 'better', 'between', 'both',
+  'call', 'calls', 'can', 'change', 'changes', 'child', 'children',
+  'come', 'comes', 'could', 'day', 'days', 'did', 'does', 'down',
+  'each', 'even', 'every', 'few', 'find', 'first', 'from',
+  'get', 'gets', 'getting', 'give', 'gives', 'got', 'had',
+  'has', 'have', 'having', 'here', 'him', 'his', 'into', 'its',
+  'just', 'keep', 'keeps', 'kind', 'kinds', 'last', 'let',
+  'like', 'likes', 'little', 'make', 'makes', 'making',
+  'many', 'may', 'might', 'more', 'most', 'much', 'must',
+  'name', 'names', 'never', 'now', 'off', 'often', 'only',
+  'other', 'others', 'our', 'ours', 'out', 'over', 'own',
+  'place', 'places', 'point', 'points', 'put', 'puts',
+  'same', 'say', 'says', 'said', 'she', 'should', 'since',
+  'some', 'something', 'still', 'such', 'take', 'takes', 'taking',
+  'tell', 'tells', 'than', 'that', 'the', 'their', 'theirs',
+  'them', 'then', 'there', 'these', 'they', 'thing', 'things',
+  'this', 'those', 'thought', 'thoughts', 'three', 'through',
+  'too', 'under', 'until', 'up', 'upon', 'us', 'use', 'used',
+  'very', 'want', 'wants', 'way', 'ways', 'well', 'went',
+  'were', 'what', 'when', 'where', 'which', 'while',
+  'white', 'who', 'whole', 'why', 'will', 'with', 'without',
+  'word', 'words', 'would', 'year', 'years', 'you', 'your', 'yours',
+  'red', 'green', 'blue', 'yellow', 'brown', 'pink', 'orange',
+  'head', 'arm', 'arms', 'eye', 'eyes', 'mouth', 'leg', 'legs',
+  'foot', 'feet', 'body', 'heart', 'blood', 'sun', 'moon',
+  'star', 'stars', 'sky', 'sea', 'river', 'rivers', 'mountain',
+  'stone', 'stones', 'fire', 'wind', 'rain', 'snow', 'ice',
+  'king', 'kings', 'queen', 'queens',
+  'bellend', 'bollok', 'bullshit', 'fuck', 'shit', 'asshole', 'bitch', 'dick', 'cunt',
+
+  // Termos em espanhol que não pertencem ao português
+  'perro', 'perros', 'malo', 'malos', 'nino', 'ninos', 'nina', 'ninas',
+  'gracias', 'adios', 'hombre', 'hombres', 'mujer', 'mujeres',
+  'noche', 'noches', 'hoy', 'ayer', 'siempre', 'nunca',
+  'donde', 'quando', 'quien', 'pero', 'arriba', 'abajo',
+  'cerca', 'lejos', 'bienvenido', 'bienvenidos',
+
+  // Arcanismos bizarros, OCR e corruptelas do lexico antigo
+  'abachuchu', 'ababaloalo', 'aabora', 'aavora', 'abafanetico', 'abajurdio',
+  'ababangai', 'ababoni', 'abacatuxia', 'abagacado', 'abago', 'abagum',
+  'abalu', 'abambulante', 'aa', 'ãã', 'aal', 'aaru', 'ãatá',
+
+  // Abreviações gramaticais, técnicas e siglas
+  'adj', 'adv', 'conj', 'interj', 'pej', 'prov', 'senv', 'cosv', 'dra', 'prof',
+  'etc', 'sta', 'sto', 'sr', 'sra', 'apt', 'apto', 'ltda', 'cia',
+  'km', 'kg', 'cm', 'mm', 'ml', 'mg', 'kb', 'mb', 'gb', 'hz', 'khz', 'mhz', 'ghz',
+  'pdf', 'html', 'css', 'php', 'sql', 'xml', 'jpg', 'png', 'gif', 'mp3', 'mp4', 'avi',
+  'vlw', 'flw', 'tmj', 'fdp', 'mds', 'vc', 'pq', 'tb', 'tbm', 'hj', 'obg', 'blz',
+  'agr', 'eh', 'td', 'msg', 'zap', 'https', 'http', 'www', 'vhs', 'rpm', 'bpm', 'bps',
+  'csc', 'ctg', 'cpf', 'cnpj', 'rg', 'cep', 'cnh', 'ipva', 'iptu', 'inss', 'fgts'
+]);
+
+// Vocabulário de termos modernos e populares dicionarizados no Brasil
+const MODERN_PT_WORDS = [
+  'site', 'sites', 'blog', 'blogs', 'mouse', 'mouses',
+  'software', 'softwares', 'hardware', 'hardwares',
+  'email', 'emails', 'link', 'links', 'login', 'logins',
+  'download', 'downloads', 'upload', 'uploads',
+  'online', 'offline', 'wifi', 'pix', 'app', 'apps',
+  'post', 'posts', 'postar', 'postou', 'postado', 'postada', 'postando',
+  'deletar', 'deletou', 'deletado', 'deletada', 'deletando',
+  'print', 'prints', 'printar', 'printou', 'printado', 'printando',
+  'meme', 'memes', 'hacker', 'hackers',
+  'feed', 'feeds', 'feedback', 'feedbacks', 'backup', 'backups',
+  'podcast', 'podcasts', 'spoiler', 'spoilers', 'crush', 'crushes',
+  'selfie', 'selfies', 'gamer', 'gamers',
+  'streaming', 'streamer', 'streamers', 'setup', 'setups',
+  'tuite', 'tuites', 'tuitar', 'tuitou', 'tuitando',
+  'emoji', 'emojis', 'fake', 'fakes', 'live', 'lives',
+  'status', 'bug', 'bugs', 'bugar', 'bugou', 'bugado', 'bugada',
+  'shopping', 'shoppings', 'marketing', 'marketings',
+  'design', 'designs', 'designer', 'designers',
+  'bullying', 'delivery', 'deliveries', 'homeoffice',
+  'pandemia', 'pandemias', 'covid', 'quarentena',
+  'shampoo', 'shampoos', 'show', 'shows', 'bar', 'bares',
+  'pub', 'pubs', 'rock', 'pop', 'jazz', 'rap', 'funk',
+  'skate', 'skates', 'surf', 'surfar', 'surfou', 'surfando',
+  'pizza', 'pizzas', 'hamburguer', 'hambúrguer', 'hamburgueres', 'hambúrgueres',
+  'bacon', 'chopp', 'chope', 'chopes', 'croissant', 'croissants',
+  'buffet', 'buffets', 'sushi', 'sushis', 'sashimi', 'sashimis',
+  'yakisoba', 'yakisobas', 'ketchup', 'maionese',
+  'lingerie', 'lingeries', 'sutiã', 'sutiãs', 'jeans',
+  'short', 'shorts', 'blazer', 'blazers', 'top', 'tops'
+];
+
 async function processFileLines(filePath, lineHandler) {
   if (!fs.existsSync(filePath)) {
     console.warn(`Arquivo não encontrado: ${filePath}`);
@@ -185,18 +309,24 @@ async function buildDictionary() {
     const cleanRaw = raw.trim();
     if (cleanRaw.length < 2) return;
 
+    // Descarta linhas com espaços, hífens ou caracteres especiais
+    if (/[\s\-_./0-9#@!$%^&*()+=[\]{}|;:",<>?\\]/.test(cleanRaw)) return;
+
     // Normalização sem acentos, apenas [a-z]
     const normalized = normalizeWord(cleanRaw);
     if (normalized.length < 2 || normalized.length > 28) return;
 
-    // Remove caracteres especiais
-    if (/[0-9_#@!$%^&*()+=[\]{}|;:",.<>?/\\]/.test(cleanRaw)) return;
+    // EXIGÊNCIA DE VOGAL: toda palavra genuína do português deve conter [aeiou]
+    if (!/[aeiou]/.test(normalized)) return;
 
     // Ignora 3 letras repetidas (ex: 'aaaa', 'kkk', 'zzz')
     if (/(.)\1\1/.test(normalized)) return;
 
     // Se tiver 2 letras, aceita apenas palavras válidas da língua
     if (normalized.length === 2 && !VALID_2_LETTER_WORDS.has(normalized)) return;
+
+    // Rejeita termos da blacklist (inglês, espanhol, corruptelas e siglas)
+    if (STOPWORDS.has(normalized)) return;
 
     if (!wordsMap.has(normalized)) {
       wordsMap.set(normalized, cleanRaw.toLowerCase());
@@ -209,40 +339,41 @@ async function buildDictionary() {
     }
   };
 
-  // 3. Lê Léxico
-  console.log('2. Lendo léxico...');
-  await processFileLines(path.join(PT_BR_DIR, 'lexico'), (line) => {
-    addWord(line);
-  });
-  console.log(`   Total acumulado: ${wordsMap.size} palavras`);
+  // 3. Lê base oficial IME-USP (261k palavras autênticas com acentuação e flexões completas)
+  const uspPath = path.join(PT_BR_DIR, 'usp');
+  if (fs.existsSync(uspPath)) {
+    console.log('2. Lendo base oficial IME-USP...');
+    await processFileLines(uspPath, (line) => {
+      addWord(line);
+    });
+    console.log(`   Total acumulado: ${wordsMap.size} palavras`);
+  }
 
-  // 4. Lê Conjugações Verbais
-  console.log('3. Lendo conjugações verbais...');
+  // 4. Lê Conjugações Verbais do corpus PT-BR (183k formas legítimas)
+  console.log('3. Lendo conjugações verbais completas...');
   await processFileLines(path.join(PT_BR_DIR, 'conjugações'), (line) => {
     addWord(line);
   });
   console.log(`   Total acumulado: ${wordsMap.size} palavras`);
 
-  // 5. Adiciona termos válidos do ICF
-  console.log('4. Integrando termos do corpus ICF...');
-  for (const [norm] of icfMap.entries()) {
-    addWord(norm);
+  // 5. Adiciona termos modernos de tecnologia e cultura dicionarizados
+  console.log('4. Integrando termos modernos da língua portuguesa...');
+  for (const w of MODERN_PT_WORDS) {
+    addWord(w);
   }
   console.log(`   Total acumulado: ${wordsMap.size} palavras`);
 
-  // 6. Lê Listas Especiais
-  const listasDir = path.join(PT_BR_DIR, 'listas');
-  if (fs.existsSync(listasDir)) {
-    const listFiles = fs.readdirSync(listasDir);
-    for (const file of listFiles) {
-      console.log(`5. Lendo lista: ${file}...`);
-      await processFileLines(path.join(listasDir, file), (line) => {
-        addWord(line);
-      });
-    }
+  // 6. Lê verbos infinitivos
+  const verbosPath = path.join(PT_BR_DIR, 'listas', 'verbos');
+  if (fs.existsSync(verbosPath)) {
+    console.log('5. Lendo lista de verbos infinitivos...');
+    await processFileLines(verbosPath, (line) => {
+      addWord(line);
+    });
+    console.log(`   Total acumulado: ${wordsMap.size} palavras`);
   }
 
-  console.log(`\nProcessamento léxico concluído! Total de palavras únicas: ${wordsMap.size}`);
+  console.log(`\nProcessamento léxico concluído! Total de palavras únicas limpas: ${wordsMap.size}`);
 
   // 7. Ordena e calcula níveis de dificuldade para todas as palavras
   console.log('6. Calculando níveis de dificuldade para todas as palavras...');
@@ -309,4 +440,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { buildDictionary, evaluateWordDifficulty };
+module.exports = { buildDictionary, evaluateWordDifficulty, STOPWORDS, VALID_2_LETTER_WORDS };
