@@ -69,6 +69,7 @@
   const hudRoundNumber = document.getElementById('hud-round-number');
   const hudDifficultyBadge = document.getElementById('hud-difficulty-badge');
   const hudTimerBadge = document.getElementById('hud-timer-badge');
+  const hudLivesDisplay = document.getElementById('hud-lives-display');
   const tensionHalo = document.getElementById('tension-halo');
   const bombContainer = document.getElementById('bomb-container');
   const displayPrompt = document.getElementById('display-prompt');
@@ -241,10 +242,40 @@
     inputNickname.value = savedNick;
   }
 
-  // Gerar código aleatório amigável no lobby
+  // Renderizador unificado de corações (vidas ativas e quebradas/escuras)
+  function getHeartsHtml(lives, maxLives = 3, newlyLostIndex = -1) {
+    const total = Math.max(1, maxLives || 3);
+    let html = '';
+    for (let i = 0; i < total; i++) {
+      if (i < lives) {
+        html += '<span class="heart-icon heart-alive" title="Vida ativa">❤️</span>';
+      } else if (i === newlyLostIndex) {
+        html += '<span class="heart-icon heart-lost heart-break-anim" title="Vida perdida">💔</span>';
+      } else {
+        html += '<span class="heart-icon heart-lost" title="Vida perdida">💔</span>';
+      }
+    }
+    return html;
+  }
+
+  // Gerar código aleatório amigável no lobby com animação de giro do dado
   btnRandomCode.addEventListener('click', () => {
-    const presets = ['BOMB', 'FOGO', 'BATA', 'TOOM', 'VAPO', 'POW', 'BOOM', 'RAIO'];
-    inputRoomCode.value = presets[Math.floor(Math.random() * presets.length)];
+    btnRandomCode.classList.remove('rolling');
+    void btnRandomCode.offsetWidth; // Força reflow para reiniciar animação
+    btnRandomCode.classList.add('rolling');
+    setTimeout(() => btnRandomCode.classList.remove('rolling'), 500);
+
+    const presets = [
+      'BOMB', 'FOGO', 'BATA', 'TOOM', 'VAPO', 'POW', 'BOOM', 'RAIO',
+      'PICO', 'TCHÊ', 'OXE', 'GURI', 'PIÁ', 'TREM', 'UAI', 'SOL'
+    ];
+    const currentVal = inputRoomCode.value.trim().toUpperCase();
+    const pool = presets.filter(p => p !== currentVal);
+    inputRoomCode.value = pool[Math.floor(Math.random() * pool.length)];
+
+    if (window.soundEngine && typeof window.soundEngine.playTick === 'function') {
+      window.soundEngine.playTick();
+    }
   });
 
   let serverTunnelUrl = null;
@@ -1040,8 +1071,22 @@
     document.body.classList.add('shake-screen');
     setTimeout(() => document.body.classList.remove('shake-screen'), 600);
 
+    const maxL = currentMaxLives || 3;
+    const isMe = (victim.id === myPlayerId);
+    const victimTitle = isMe ? 'Você virou purê e perdeu 1 vida!' : `${escapeHtml(victim.nickname)} virou purê e perdeu 1 vida!`;
+    const heartsExplosionHtml = getHeartsHtml(victim.lives, maxL, victim.lives);
+
     overlayExplosion.style.display = 'flex';
-    explosionVictimText.textContent = `${victim.nickname} perdeu 1 vida! Restam: ${victim.lives} ❤️`;
+    explosionVictimText.innerHTML = `
+      <div class="explosion-victim-name">${victimTitle}</div>
+      <div class="explosion-hearts-bar">${heartsExplosionHtml}</div>
+      <div class="explosion-remaining-label">Restam ${victim.lives} de ${maxL} vidas</div>
+    `;
+
+    // Se for o jogador local, quebra o coração no HUD na mesma hora com animação de rachadura
+    if (isMe && hudLivesDisplay) {
+      hudLivesDisplay.innerHTML = getHeartsHtml(victim.lives, maxL, victim.lives);
+    }
 
     // Renderiza palavras que poderiam ter sido ditas
     missedWordsList.innerHTML = '';
@@ -1155,7 +1200,9 @@
         const finalPts = r.finalScore !== undefined ? r.finalScore : r.score;
         const survBadge = r.isLastSurvivor 
           ? `<span class="ranking-pill survivor-pill" title="Último sobrevivente da arena">🛡️ Sobreviveu</span>` 
-          : `<span class="ranking-pill" title="${r.lives} vidas">❤️ ${r.lives}</span>`;
+          : (r.lives > 0 
+              ? `<span class="ranking-pill" title="${r.lives} vidas">❤️ ${r.lives}</span>`
+              : `<span class="ranking-pill pill-dead" title="Eliminado">💔 0</span>`);
 
         item.innerHTML = `
           <span class="ranking-pos">${pos}</span>
@@ -1276,6 +1323,12 @@
       }
     }
 
+    // Atualiza vidas do jogador local no HUD
+    const mePlayer = state.players.find(p => p.id === myPlayerId) || (state.isSolo ? state.players[0] : null);
+    if (hudLivesDisplay && mePlayer) {
+      hudLivesDisplay.innerHTML = getHeartsHtml(mePlayer.lives, currentMaxLives);
+    }
+
     // Barra de Jogadores com Vidas
     renderGamePlayers(state.players, state.currentPlayerId);
 
@@ -1357,12 +1410,8 @@
 
       const initial = p.nickname.charAt(0).toUpperCase();
 
-      // Corações proporcionais à regra de vidas da sala
-      let heartsHtml = '';
-      const totalHearts = currentMaxLives || 3;
-      for (let h = 0; h < totalHearts; h++) {
-        heartsHtml += (h < p.lives) ? '❤️' : '🖤';
-      }
+      // Corações proporcionais à regra de vidas da sala (❤️ vivas e 💔 quebradas/escuras)
+      const heartsHtml = getHeartsHtml(p.lives, currentMaxLives);
 
       // Badge flutuante indicativo de turno
       let turnBadge = '';

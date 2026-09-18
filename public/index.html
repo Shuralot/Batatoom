@@ -66,8 +66,8 @@
                 maxlength="6" 
                 style="text-transform: uppercase;"
               >
-              <button type="button" id="btn-random-code" class="btn-secondary btn-sm" title="Gerar código aleatório">
-                🎲
+              <button type="button" id="btn-random-code" class="btn-dice" title="Sortear código divertido de sala" aria-label="Sortear código de sala">
+                <span class="dice-icon">🎲</span>
               </button>
             </div>
             <small class="helper-text">Deixe em branco para criar ou entrar na sala rápida.</small>
@@ -230,6 +230,10 @@
         <div class="hud-item hud-timer-mode">
           <span class="hud-label">TEMPO</span>
           <span id="hud-timer-badge" class="badge-diff medium">ALEATÓRIO</span>
+        </div>
+        <div id="hud-lives-item" class="hud-item hud-lives">
+          <span class="hud-label">VIDAS</span>
+          <span id="hud-lives-display" class="hud-value hud-hearts">❤️❤️❤️</span>
         </div>
         <div id="hud-solo-score-item" class="hud-item hud-solo" style="display: none;">
           <span class="hud-label">PONTOS</span>

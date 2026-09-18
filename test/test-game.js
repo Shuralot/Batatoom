@@ -692,8 +692,9 @@ async function runTests() {
   roomRegional.addPlayer('r2', 'Regional Player 2', false);
   roomRegional.startGame('r1');
   roomRegional.startRound();
+  const curP = roomRegional.getCurrentPlayer();
   roomRegional.currentPrompt = 'MAC';
-  const subRes = roomRegional.submitWord('r1', 'macaxeira');
+  const subRes = roomRegional.submitWord(curP.id, 'macaxeira');
   assert.strictEqual(subRes.success, true, 'Submissão de "macaxeira" deve ser aceita com sucesso');
   assert.ok(subRes.points >= 10);
   assert.strictEqual(roomRegional.usedWords.has('macaxeira'), true);
