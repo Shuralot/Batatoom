@@ -169,15 +169,13 @@ class PromptGenerator {
       pool = this.easyPrompts.length > 0 ? this.easyPrompts : this.mediumPrompts;
     }
 
-    // Tentar até 15 vezes sortear um prompt que não esteve recente
-    for (let attempt = 0; attempt < 15; attempt++) {
-      const candidate = pool[Math.floor(Math.random() * pool.length)];
-      if (!recentSet.has(candidate.prompt)) {
-        return candidate;
-      }
+    // 1. Filtra candidatos disponíveis que ainda não foram sorteados nesta partida
+    const available = pool.filter(candidate => !recentSet.has(candidate.prompt));
+    if (available.length > 0) {
+      return available[Math.floor(Math.random() * available.length)];
     }
 
-    // Fallback
+    // 2. Fallback caso todos os prompts daquela categoria já tenham sido esgotados na partida
     return pool[Math.floor(Math.random() * pool.length)];
   }
 

@@ -68,12 +68,13 @@ async function runTests() {
     { input: 'door', expected: false },
     { input: 'run', expected: false },
     { input: 'drink', expected: false },
-    // Municípios e países aglutinados sem espaço (devem ser rejeitados)
-    { input: 'saopaulo', expected: false },
-    { input: 'riodejaneiro', expected: false },
+    // Municípios genéricos não-capitais aglutinados (devem ser rejeitados)
     { input: 'altaflorestadoeste', expected: false },
-    { input: 'estadosunidos', expected: false },
     { input: 'alfredowagner', expected: false },
+    // Países, estados e capitais agora são aceitos com e sem espaço
+    { input: 'saopaulo', expected: true },
+    { input: 'riodejaneiro', expected: true },
+    { input: 'estadosunidos', expected: true },
     // Siglas, abreviações e palavras sem vogal (devem ser rejeitadas)
     { input: 'vlw', expected: false },
     { input: 'fdp', expected: false },
@@ -180,7 +181,17 @@ async function runTests() {
   // Se o próximo tentar a mesma palavra:
   const repeatRes = room.submitWord(nextPlayer.id, validWord);
   assert.strictEqual(repeatRes.success, false);
-  assert.ok(repeatRes.reason.includes('já foi usada nesta rodada'), `Deveria avisar que já foi usada. Obtido: ${repeatRes.reason}`);
+  assert.strictEqual(repeatRes.isDuplicate, true, 'Deve indicar isDuplicate: true');
+  assert.ok(repeatRes.reason.includes('já foi usada'), `Deveria avisar que já foi usada. Obtido: ${repeatRes.reason}`);
+
+  // Verifica que mesmo iniciando uma nova rodada (startRound), a palavra continua bloqueada
+  room.startRound();
+  room.roundQueue = [nextPlayer.id];
+  room.currentQueueIndex = 0;
+  room.currentPrompt = normalizeWord(validWord).substring(0, 2).toUpperCase();
+  const nextRoundRepeat = room.submitWord(nextPlayer.id, validWord);
+  assert.strictEqual(nextRoundRepeat.success, false, 'Palavra já usada na partida deve continuar bloqueada na rodada seguinte');
+  assert.strictEqual(nextRoundRepeat.isDuplicate, true);
 
   // TESTE 7: Regra de Turno Único por Rodada (roundQueue) e Passagem de Vítima
   console.log('7. Testando fila de turnos sem repetição e passagem de batata após explosão...');
@@ -438,6 +449,257 @@ async function runTests() {
 
   if (roomDiff.bombTimerInterval) clearInterval(roomDiff.bombTimerInterval);
   console.log('   ✅ Palavras difíceis e mestre geram altas pontuações e concedem mais tempo validado com sucesso.');
+
+  // TESTE 16: Validação de Países, Estados do Brasil e Capitais
+  console.log('16. Testando inclusão de países, estados do Brasil e capitais...');
+  
+  // 16.1 Todos os 27 estados do Brasil
+  const todosEstados = [
+    'Acre', 'Alagoas', 'Amapá', 'Amazonas', 'Bahia', 'Ceará', 'Distrito Federal',
+    'Espírito Santo', 'Goiás', 'Maranhão', 'Mato Grosso', 'Mato Grosso do Sul',
+    'Minas Gerais', 'Pará', 'Paraíba', 'Paraná', 'Pernambuco', 'Piauí',
+    'Rio de Janeiro', 'Rio Grande do Norte', 'Rio Grande do Sul', 'Rondônia',
+    'Roraima', 'Santa Catarina', 'São Paulo', 'Sergipe', 'Tocantins'
+  ];
+  for (const est of todosEstados) {
+    const res = dictionary.checkWord(est);
+    assert.strictEqual(res.valid, true, `Estado "${est}" deve ser aceito`);
+    // Também deve ser aceito sem espaços nem acentos
+    const norm = normalizeWord(est);
+    const resNorm = dictionary.checkWord(norm);
+    assert.strictEqual(resNorm.valid, true, `Estado normalizado "${norm}" deve ser aceito`);
+  }
+
+  // 16.2 Todas as 27 capitais brasileiras
+  const todasCapitais = [
+    'Rio Branco', 'Maceió', 'Macapá', 'Manaus', 'Salvador', 'Fortaleza',
+    'Brasília', 'Vitória', 'Goiânia', 'São Luís', 'Cuiabá', 'Campo Grande',
+    'Belo Horizonte', 'Belém', 'João Pessoa', 'Curitiba', 'Recife', 'Teresina',
+    'Rio de Janeiro', 'Natal', 'Porto Alegre', 'Porto Velho', 'Boa Vista',
+    'Florianópolis', 'São Paulo', 'Aracaju', 'Palmas'
+  ];
+  for (const cap of todasCapitais) {
+    const res = dictionary.checkWord(cap);
+    assert.strictEqual(res.valid, true, `Capital "${cap}" deve ser aceita`);
+    const norm = normalizeWord(cap);
+    const resNorm = dictionary.checkWord(norm);
+    assert.strictEqual(resNorm.valid, true, `Capital normalizada "${norm}" deve ser aceita`);
+  }
+
+  // 16.3 Países e variantes comuns
+  const amostraPaises = [
+    'Brasil', 'brasil',
+    'Estados Unidos', 'estados unidos', 'estadosunidos',
+    'Alemanha', 'alemanha',
+    'Japão', 'japao',
+    'África do Sul', 'africadosul',
+    'Coreia do Sul', 'coreiadosul',
+    'Nova Zelândia', 'novazelandia',
+    'Tchéquia', 'Catar', 'Portugal', 'França', 'Itália', 'Canadá',
+    'Argentina', 'Chile', 'México', 'Uruguai', 'Austrália', 'China', 'Rússia'
+  ];
+  for (const pais of amostraPaises) {
+    const res = dictionary.checkWord(pais);
+    assert.strictEqual(res.valid, true, `País "${pais}" deve ser aceito`);
+  }
+
+  // 16.4 Submissão no fluxo de partida (GameRoom)
+  const roomGeo = new GameRoom('GEO_TEST', mockIo);
+  roomGeo.addPlayer('p_geo1', 'Viajante', true);
+  roomGeo.addPlayer('p_geo2', 'Explorador', false);
+  roomGeo.startGame('p_geo1');
+  roomGeo.startRound();
+  roomGeo.roundQueue = ['p_geo1', 'p_geo2'];
+  roomGeo.currentQueueIndex = 0;
+
+  // Teste com prompt "PA" -> "São Paulo"
+  roomGeo.currentPrompt = 'PA';
+  const resGeo1 = roomGeo.submitWord('p_geo1', 'São Paulo');
+  assert.strictEqual(resGeo1.success, true, 'Submissão de "São Paulo" com prompt "PA" deve ter sucesso');
+
+  // Teste com prompt "HOR" -> "Belo Horizonte"
+  roomGeo.roundQueue = ['p_geo1', 'p_geo2'];
+  roomGeo.currentQueueIndex = 1;
+  roomGeo.currentPrompt = 'HOR';
+  const resGeo2 = roomGeo.submitWord('p_geo2', 'belo horizonte');
+  assert.strictEqual(resGeo2.success, true, 'Submissão de "belo horizonte" com prompt "HOR" deve ter sucesso');
+
+  // Teste com prompt "UNI" -> "Estados Unidos"
+  roomGeo.roundQueue = ['p_geo1', 'p_geo2'];
+  roomGeo.currentQueueIndex = 0;
+  roomGeo.currentPrompt = 'UNI';
+  const resGeo3 = roomGeo.submitWord('p_geo1', 'estadosunidos');
+  assert.strictEqual(resGeo3.success, true, 'Submissão de "estadosunidos" com prompt "UNI" deve ter sucesso');
+
+  if (roomGeo.bombTimerInterval) clearInterval(roomGeo.bombTimerInterval);
+  console.log('   ✅ 100% dos 27 estados, 27 capitais e países validados no motor do jogo com sucesso.');
+
+  // 17. Testando pontuação híbrida, bônus de sobrevivência e awards de fim de jogo
+  console.log('17. Testando pontuação híbrida, bônus de sobrevivência e awards de fim de jogo...');
+  let emittedGameOver = null;
+  const mockIoGameOver = {
+    to: () => ({
+      emit: (evt, payload) => {
+        if (evt === 'game_over') emittedGameOver = payload;
+      }
+    })
+  };
+
+  const roomHybrid = new GameRoom('HYBRID_TEST', mockIoGameOver);
+  const playerH1 = roomHybrid.addPlayer('pH1', 'CraqueDasPalavras', true);
+  const playerH2 = roomHybrid.addPlayer('pH2', 'SobreviventeCalmo', false);
+  roomHybrid.startGame('pH1');
+  roomHybrid.startRound();
+
+  // playerH1 faz palavra mestre e ganha muitos pontos
+  roomHybrid.roundQueue = ['pH1', 'pH2'];
+  roomHybrid.currentQueueIndex = 0;
+  roomHybrid.currentPrompt = 'CION';
+  const resMestreHybrid = roomHybrid.submitWord('pH1', 'inconstitucionalidade');
+  assert.strictEqual(resMestreHybrid.success, true);
+  assert.ok(playerH1.score >= 100, 'Palavra mestre longa deve render pontuação alta (> 100 pts)');
+
+  // Simulamos playerH1 sendo eliminado na reta final (vidas = 0)
+  playerH1.lives = 0;
+  playerH1.isAlive = false;
+  // E playerH2 sobrevive com 1 vida
+  playerH2.lives = 1;
+  playerH2.score = 30; // Fez apenas uma palavra simples
+  playerH2.isAlive = true;
+
+  roomHybrid.endGame();
+
+  assert.ok(emittedGameOver, 'Deve emitir game_over');
+  assert.strictEqual(typeof emittedGameOver.winner, 'object', 'Deve conter vencedor');
+  assert.ok(emittedGameOver.awards.length >= 2, 'Deve gerar lista de awards/troféus');
+
+  // Verifica que o bônus de sobrevivência foi computado: 1 vida * 200 + 300 (lastSurvivor) = 500
+  const survivorData = emittedGameOver.ranking.find(r => r.id === 'pH2');
+  assert.strictEqual(survivorData.survivalBonus, 500, 'Sobrevivente com 1 vida deve ter 500 pts de bônus');
+  assert.strictEqual(survivorData.finalScore, 530, 'Final score do sobrevivente deve ser 530 (30 + 500)');
+
+  // Se playerH1 fez uma palavra de 200 pts, mesmo eliminado com 0 vidas ele teve 200 pts
+  const p1Data = emittedGameOver.ranking.find(r => r.id === 'pH1');
+  assert.strictEqual(p1Data.survivalBonus, 0, 'Eliminado tem 0 de bônus de vida');
+  assert.strictEqual(p1Data.finalScore, playerH1.score, 'Final score do eliminado é o seu word score');
+
+  // Se playerH1 fizesse 700 pts, ele venceria mesmo eliminado! Testemos esse equilíbrio:
+  playerH1.score = 700;
+  roomHybrid.endGame();
+  assert.strictEqual(emittedGameOver.winner.id, 'pH1', 'Jogador com pontuação extraordinária pode vencer pelo desempenho geral');
+  assert.strictEqual(emittedGameOver.lastSurvivor.id, 'pH2', 'Último sobrevivente continua registrado como pH2');
+
+  console.log('   ✅ Sistema de pontuação híbrida e awards no fim de partida validados com 100% de sucesso.');
+
+  // 18. Testando piso dinâmico anti-stalling e resfriamento da batata
+  console.log('18. Testando piso dinâmico anti-stalling e resfriamento da batata...');
+  const roomStall = new GameRoom('STALL_TEST', mockIo);
+  roomStall.addPlayer('ps1', 'Espertinho', true);
+  roomStall.addPlayer('ps2', 'Inocente', false);
+  roomStall.addPlayer('ps3', 'Amigo', false);
+  roomStall.startGame('ps1');
+  roomStall.startRound();
+
+  // No início (turnCount = 0), o piso mínimo deve ser 8500ms
+  roomStall.turnCount = 0;
+  assert.strictEqual(roomStall.getMinimumTurnBufferMs(), 8500, 'Piso inicial deve ser 8500ms');
+
+  // No turno 10, o piso decai para 8500 - 1500 = 7000ms
+  roomStall.turnCount = 10;
+  assert.strictEqual(roomStall.getMinimumTurnBufferMs(), 7000, 'Piso no turno 10 deve ser 7000ms');
+
+  // Nos turnos avançados (ex: turno 30), deve respeitar o limite inferior de 5500ms
+  roomStall.turnCount = 30;
+  assert.strictEqual(roomStall.getMinimumTurnBufferMs(), 5500, 'Piso nos turnos avançados deve ser travado em 5500ms');
+
+  // No Mata-Mata, decai de 7500ms até o piso de 4800ms
+  roomStall.isMataMata = true;
+  roomStall.mataMataHits = 0;
+  assert.strictEqual(roomStall.getMinimumTurnBufferMs(), 7500, 'Mata-Mata inicial deve ser 7500ms');
+  roomStall.mataMataHits = 15;
+  assert.strictEqual(roomStall.getMinimumTurnBufferMs(), 4800, 'Mata-Mata avançado deve ser travado em 4800ms');
+
+  // Simula jogador segurando a batata até restar apenas 1 segundo antes de enviar a palavra
+  roomStall.isMataMata = false;
+  roomStall.turnCount = 0;
+  roomStall.roundQueue = ['ps1', 'ps2'];
+  roomStall.currentQueueIndex = 0;
+  roomStall.currentPrompt = 'CA';
+  // Força tempo restante em apenas 800ms (quase estourando)
+  roomStall.bombEndTime = Date.now() + 800;
+  roomStall.currentTensionStage = 4; // Pânico
+
+  const resStall = roomStall.submitWord('ps1', 'casa');
+  assert.strictEqual(resStall.success, true);
+
+  // O tempo restante deve ter sido estendido para pelo menos 8.500ms
+  const remainingAfterPass = roomStall.bombEndTime - Date.now();
+  assert.ok(remainingAfterPass >= 8400, `Tempo restante deve ser restaurado pelo piso anti-stalling (>= 8400ms). Obtido: ${remainingAfterPass}`);
+
+  // A batata deve ter resfriado (não pode estar mais em Pânico imediato no colo do próximo jogador)
+  assert.notStrictEqual(roomStall.currentTensionStage, 4, 'A batata deve resfriar após a aplicação do piso anti-stalling');
+
+  if (roomStall.bombTimerInterval) clearInterval(roomStall.bombTimerInterval);
+  console.log('   ✅ Piso dinâmico anti-stalling e resfriamento validados com 100% de sucesso.');
+
+  // 19. Testando unicidade de prompts na partida e bloqueio de palavras
+  console.log('19. Testando unicidade de prompts na partida e bloqueio de palavras...');
+  const roomUniq = new GameRoom('UNIQ_TEST', mockIo);
+  roomUniq.addPlayer('u1', 'PlayerA', true);
+  roomUniq.addPlayer('u2', 'PlayerB', false);
+  roomUniq.startGame('u1');
+
+  // Sorteia 30 prompts consecutivos e garante que NENHUM se repete
+  const drawnPrompts = new Set();
+  for (let t = 0; t < 30; t++) {
+    roomUniq.turnCount = t + 1;
+    roomUniq.pickNewPrompt();
+    assert.strictEqual(
+      drawnPrompts.has(roomUniq.currentPrompt),
+      false,
+      `Prompt "${roomUniq.currentPrompt}" foi sorteado mais de uma vez na mesma partida!`
+    );
+    drawnPrompts.add(roomUniq.currentPrompt);
+  }
+  assert.strictEqual(drawnPrompts.size, 30, 'Todos os 30 prompts sorteados devem ser 100% distintos');
+
+  if (roomUniq.bombTimerInterval) clearInterval(roomUniq.bombTimerInterval);
+  console.log('   ✅ Prompts 100% únicos na partida e bloqueio global de repetição validados com sucesso.');
+
+  // 20. Testando vocabulário regional brasileiro e nomes de comidas típicas no dicionário
+  console.log('20. Testando vocabulário regional brasileiro e nomes de comidas típicas...');
+  const regionalWordsToTest = [
+    'macaxeira', 'aipim', 'mandioca', 'jerimum',
+    'coxinha', 'acarajé', 'vatapá', 'caruru', 'tapioca', 'farofa',
+    'picanha', 'torresmo', 'calabresa', 'paçoca', 'buchada', 'sarapatel',
+    'brigadeiro', 'beijinho', 'quindim', 'pamonha', 'canjica', 'curau', 'mungunzá',
+    'açaí', 'cupuaçu', 'pequi', 'jabuticaba', 'chimarrão', 'tucupi', 'jambu',
+    'oxente', 'oxe', 'vixe', 'uai', 'tchê', 'guri', 'piá'
+  ];
+
+  for (const word of regionalWordsToTest) {
+    const check = dictionary.checkWord(word);
+    assert.strictEqual(
+      check.valid,
+      true,
+      `Palavra regional/culinária "${word}" deveria ser aceita pelo dicionário!`
+    );
+  }
+
+  // Testa submissão de palavra regional em sala de jogo
+  const roomRegional = new GameRoom('REGIONAL_TEST', mockIo);
+  roomRegional.addPlayer('r1', 'Regional Player 1', true);
+  roomRegional.addPlayer('r2', 'Regional Player 2', false);
+  roomRegional.startGame('r1');
+  roomRegional.startRound();
+  roomRegional.currentPrompt = 'MAC';
+  const subRes = roomRegional.submitWord('r1', 'macaxeira');
+  assert.strictEqual(subRes.success, true, 'Submissão de "macaxeira" deve ser aceita com sucesso');
+  assert.ok(subRes.points >= 10);
+  assert.strictEqual(roomRegional.usedWords.has('macaxeira'), true);
+
+  if (roomRegional.bombTimerInterval) clearInterval(roomRegional.bombTimerInterval);
+  console.log('   ✅ Vocabulário regional e comidas típicas brasileiras validados com 100% de sucesso.');
 
   console.log('\n🎉 TODOS OS TESTES PASSARAM COM SUCESSO! 💣\n');
   process.exit(0);

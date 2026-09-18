@@ -1702,6 +1702,38 @@ body {
   animation: shake 0.4s ease;
 }
 
+.lock-shake {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.6) !important;
+  animation: shake 0.45s ease;
+}
+
+.feedback-message.lock-error {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+  animation: shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.lock-icon-bounce {
+  display: inline-block;
+  font-size: 1.25rem;
+  line-height: 1;
+  animation: lockPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes lockPop {
+  0% { transform: scale(0.3) rotate(-20deg); opacity: 0; }
+  60% { transform: scale(1.35) rotate(10deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
 .success-input {
   border-color: var(--color-success) !important;
   box-shadow: 0 0 16px var(--color-success-glow) !important;
@@ -1814,13 +1846,254 @@ body {
   width: 100%;
 }
 
-.modal-header {
+.modal-guide {
+  max-width: 650px;
+  max-height: 88vh;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.modal-guide .modal-header {
+  padding: 16px 20px 14px;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.modal-header-title {
+  display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--bg-card-border);
-  padding-bottom: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
+}
+
+.modal-title-icon {
+  font-size: 1.5rem;
+}
+
+.modal-header-title h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+/* Abas de Navegação do Guia */
+.guide-tabs {
+  display: flex;
+  background: rgba(10, 15, 29, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.guide-tab-btn {
+  flex: 1;
+  min-width: 125px;
+  padding: 12px 10px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.guide-tab-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.guide-tab-btn.active {
+  color: #fbbf24;
+  border-bottom-color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.guide-body {
+  padding: 18px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.guide-tab-panel {
+  display: none;
+  animation: fadeInPanel 0.25s ease;
+}
+
+.guide-tab-panel.active {
+  display: block;
+}
+
+@keyframes fadeInPanel {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.guide-section-intro {
+  margin-bottom: 14px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.guide-card-box {
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.guide-card-box.highlight-box {
+  background: rgba(251, 191, 36, 0.06);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.guide-card-box h5 {
+  font-size: 0.95rem;
+  color: #fbbf24;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.guide-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.guide-table th {
+  padding: 8px 10px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.guide-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.pill-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.pill-green {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.pill-blue {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.pill-purple {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+}
+
+.pill-gold {
+  background: rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+}
+
+.guide-list {
+  padding-left: 18px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.guide-list li strong {
+  color: #fff;
+}
+
+.guide-list code {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #fbbf24;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+}
+
+/* Estágios de Tensão */
+.tension-stage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tension-stage-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+.stage-calm {
+  background: rgba(16, 185, 129, 0.1);
+  border-left: 3px solid #10b981;
+}
+
+.stage-warning {
+  background: rgba(245, 158, 11, 0.1);
+  border-left: 3px solid #f59e0b;
+}
+
+.stage-alert {
+  background: rgba(249, 115, 22, 0.12);
+  border-left: 3px solid #f97316;
+}
+
+.stage-panic {
+  background: rgba(239, 68, 68, 0.15);
+  border-left: 3px solid #ef4444;
+}
+
+.stage-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.stage-info strong {
+  color: #fff;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.stage-info p {
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
 }
 
 .btn-close {
@@ -1950,13 +2223,18 @@ body {
 /* Fim de Jogo Overlay */
 .gameover-card {
   text-align: center;
-  max-width: 480px;
+  max-width: 560px;
   width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .trophy-icon {
-  font-size: 4rem;
+  font-size: 3.8rem;
   animation: float 2s infinite ease-in-out;
+  line-height: 1;
+  margin-bottom: 4px;
 }
 
 @keyframes float {
@@ -1965,49 +2243,182 @@ body {
 }
 
 .gameover-title {
-  font-size: 2rem;
+  font-size: 1.8rem;
   color: #fbbf24;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .winner-box {
-  background: rgba(251, 191, 36, 0.15);
-  border: 1px solid rgba(251, 191, 36, 0.4);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.45);
   border-radius: var(--radius-md);
-  padding: 12px;
-  margin-bottom: 20px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 0 25px rgba(251, 191, 36, 0.12);
 }
 
 .winner-tag {
   font-size: 0.75rem;
   color: #fbbf24;
-  font-weight: 700;
-  letter-spacing: 1px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 4px;
 }
 
 .winner-name {
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: 800;
+  color: #fff;
+  margin: 2px 0 8px;
+  text-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
+}
+
+.winner-breakdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.winner-score-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  background: rgba(251, 191, 36, 0.2);
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  padding: 4px 14px;
+  border-radius: 999px;
+}
+
+.winner-score-number {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #fbbf24;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.winner-score-unit {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fde68a;
+  letter-spacing: 0.8px;
+}
+
+.winner-score-subdetails {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.winner-score-subdetails strong {
   color: #fff;
 }
 
-.podium-section {
-  text-align: left;
-  margin-bottom: 20px;
+.bullet-sep {
+  opacity: 0.5;
 }
 
-.podium-section h4 {
-  font-size: 0.95rem;
+/* Seção de Awards & Destaques */
+.awards-section {
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.section-subtitle {
+  font-size: 0.82rem;
   color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
   margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.awards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+}
+
+.award-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.award-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.award-card.award-champion {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.award-card.award-survivor {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.award-icon-box {
+  font-size: 1.6rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.award-text-box {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.award-role-title {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #fbbf24;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.award-player-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.award-detail-text {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Pódio & Lista de Ranking */
+.podium-section {
+  text-align: left;
+  margin-bottom: 16px;
 }
 
 .ranking-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 200px;
+  max-height: 220px;
   overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .ranking-item {
@@ -2017,22 +2428,118 @@ body {
   background: rgba(15, 23, 42, 0.6);
   padding: 8px 12px;
   border-radius: var(--radius-sm);
-  font-size: 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 10px;
 }
 
 .ranking-pos {
-  font-weight: 700;
-  width: 24px;
+  font-weight: 800;
+  width: 26px;
+  font-size: 1rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.ranking-col-user {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.ranking-user-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .ranking-name {
-  flex: 1;
-  font-weight: 600;
+  font-weight: 700;
+  color: #fff;
+  font-size: 0.92rem;
 }
 
-.ranking-score {
-  color: #fbbf24;
+.ranking-pill {
+  font-size: 0.68rem;
   font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+}
+
+.ranking-pill.survivor-pill {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+}
+
+.ranking-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 1px;
+}
+
+.ranking-col-score {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.ranking-score-val {
+  color: #fbbf24;
+  font-weight: 800;
+  font-size: 1.15rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ranking-score-unit {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  margin-left: 2px;
+}
+
+/* Ações e Botões do Game Over */
+.gameover-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  width: 100%;
+}
+
+.gameover-actions button {
+  width: 100%;
+  max-width: 400px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-action-exit {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-action-exit:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.btn-action-exit:active {
+  transform: translateY(1px);
 }
 
 /* ==========================================================================
@@ -2111,39 +2618,397 @@ body.tv-mode #player-action-dock {
 }
 
 /* ==========================================================================
-   RESPONSIVIDADE MOBILE
+   RESPONSIVIDADE COMPLETA (TABLET, MOBILE & TELAS PEQUENAS)
    ========================================================================== */
-@media (max-width: 600px) {
+@media (max-width: 680px) {
   .app-container {
-    padding: 10px 12px 20px;
+    padding: 8px 12px 18px;
   }
 
   .brand-title {
+    font-size: 1.45rem;
+  }
+
+  .brand-icon {
     font-size: 1.5rem;
   }
 
-  .bomb-container {
-    width: 150px;
-    height: 150px;
+  .btn-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.05rem;
   }
 
-  .bomb-body {
-    width: 135px;
-    height: 135px;
+  /* Lobby */
+  .card-lobby {
+    padding: 20px 16px;
+  }
+
+  .lobby-title {
+    font-size: 1.5rem;
+  }
+
+  /* Waiting Room */
+  .settings-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .room-code-badge {
+    font-size: 1.8rem;
+    letter-spacing: 4px;
+    padding: 8px 16px;
+  }
+
+  /* HUD */
+  .game-hud {
+    padding: 6px 10px;
+    gap: 6px 10px;
+    justify-content: space-around;
+  }
+
+  .hud-label {
+    font-size: 0.58rem;
+  }
+
+  .hud-value {
+    font-size: 0.95rem;
+  }
+
+  .badge-diff {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+  }
+
+  .badge-combo {
+    font-size: 0.78rem;
+    padding: 2px 6px;
+  }
+
+  /* Arena & Batata */
+  .potato-arena {
+    height: 350px;
+    max-width: 100%;
+  }
+
+  .potato-container {
+    width: 155px;
+    height: 130px;
+  }
+
+  .prompt-box {
+    padding: 5px 10px;
   }
 
   .prompt-letters {
-    font-size: 2.3rem;
+    font-size: 1.8rem;
+  }
+
+  .compass-arrow-shaft {
+    left: 48px;
+    width: 34px;
+  }
+
+  .compass-arrow-head {
+    left: 82px;
+    width: 30px;
+    height: 30px;
+  }
+
+  .circle-player-seat {
+    min-width: 65px;
+    max-width: 90px;
+    padding: 4px 6px;
+    border-radius: 12px;
+  }
+
+  .seat-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 0.9rem;
+  }
+
+  .seat-name {
+    font-size: 0.74rem;
+    max-width: 75px;
+  }
+
+  .seat-lives {
+    font-size: 0.72rem;
+  }
+
+  /* Dock de Ação & Input */
+  .player-action-dock {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .turn-banner {
+    margin-bottom: 8px;
+  }
+
+  .turn-badge-pulse,
+  .turn-badge-spectator {
+    font-size: 0.8rem;
+    padding: 6px 12px;
   }
 
   .input-word {
     font-size: 1.1rem;
-    padding: 12px 14px;
+    padding: 11px 12px;
   }
 
   .btn-submit {
-    padding: 0 16px;
+    padding: 0 14px;
+    font-size: 0.95rem;
+    min-width: 72px;
+  }
+
+  .live-spectator-box {
+    padding: 10px 14px;
+    min-height: 48px;
+  }
+
+  /* Modal Game Over / Pódio */
+  .gameover-card {
+    padding: 18px 14px;
+    max-height: calc(100dvh - 24px);
+    width: min(540px, calc(100vw - 20px));
+  }
+
+  .trophy-icon {
+    font-size: 3rem;
+    margin-bottom: 2px;
+  }
+
+  .gameover-title {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+  }
+
+  .solo-stats-grid {
+    gap: 8px;
+    margin: 10px 0;
+  }
+
+  .solo-stat-card {
+    padding: 8px 10px;
+  }
+
+  .solo-stat-card .stat-label {
+    font-size: 0.65rem;
+  }
+
+  .solo-stat-card .stat-val {
+    font-size: 1.25rem;
+  }
+
+  .solo-highscore-alert {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    margin-bottom: 10px;
+  }
+
+  .winner-box {
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+
+  .winner-name {
+    font-size: 1.6rem;
+    margin: 2px 0 6px;
+  }
+
+  .winner-score-badge {
+    padding: 3px 12px;
+  }
+
+  .winner-score-number {
+    font-size: 1.3rem;
+  }
+
+  .awards-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .award-card {
+    padding: 6px 10px;
+    gap: 8px;
+  }
+
+  .ranking-list {
+    max-height: 180px;
+  }
+
+  .ranking-item {
+    padding: 6px 10px;
+    gap: 6px;
+  }
+
+  .ranking-name {
+    font-size: 0.84rem;
+  }
+
+  .ranking-score-val {
     font-size: 1rem;
+  }
+
+  .gameover-actions {
+    margin-top: 12px;
+    gap: 8px;
+  }
+
+  .gameover-actions button {
+    min-height: 44px;
+    font-size: 0.95rem;
+    padding: 10px 14px;
+  }
+
+  /* Modal Como Jogar */
+  .modal-guide {
+    max-height: calc(100dvh - 20px);
+    width: min(650px, calc(100vw - 20px));
+  }
+
+  .modal-guide .modal-header {
+    padding: 12px 14px;
+  }
+
+  .modal-header-title h3 {
+    font-size: 1.1rem;
+  }
+
+  .guide-tab-btn {
+    min-width: 100px;
+    padding: 9px 6px;
+    font-size: 0.74rem;
+  }
+
+  .modal-guide-body {
+    padding: 12px 14px;
+  }
+}
+
+/* Telas Ultra Pequenas (<= 380px, ex: iPhone SE, Galaxy Fold) */
+@media (max-width: 380px) {
+  .app-container {
+    padding: 6px 8px 14px;
+  }
+
+  .brand-title {
+    font-size: 1.25rem;
+  }
+
+  .brand-icon {
+    font-size: 1.3rem;
+  }
+
+  .btn-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.95rem;
+  }
+
+  .potato-arena {
+    height: 295px;
+  }
+
+  .potato-container {
+    width: 130px;
+    height: 110px;
+  }
+
+  .prompt-letters {
+    font-size: 1.45rem;
+  }
+
+  .circle-player-seat {
+    min-width: 54px;
+    max-width: 72px;
+    padding: 3px 4px;
+  }
+
+  .seat-avatar {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+  }
+
+  .seat-name {
+    font-size: 0.65rem;
+    max-width: 56px;
+  }
+
+  .seat-lives {
+    font-size: 0.65rem;
+  }
+
+  .input-word {
+    font-size: 1rem;
+    padding: 9px 10px;
+  }
+
+  .btn-submit {
+    padding: 0 10px;
+    font-size: 0.88rem;
+    min-width: 60px;
+  }
+
+  .gameover-card {
+    padding: 14px 10px;
+  }
+
+  .gameover-title {
+    font-size: 1.35rem;
+  }
+
+  .solo-stat-card .stat-val {
+    font-size: 1.1rem;
+  }
+}
+
+/* Altura reduzida (Mobile em modo paisagem / Telas curtas) */
+@media (max-height: 600px) {
+  .top-header {
+    padding: 4px 0 8px;
+    margin-bottom: 8px;
+  }
+
+  .game-hud {
+    margin-bottom: 8px;
+    padding: 4px 10px;
+  }
+
+  .potato-arena {
+    height: 240px;
+  }
+
+  .potato-container {
+    width: 120px;
+    height: 100px;
+  }
+
+  .prompt-letters {
+    font-size: 1.35rem;
+  }
+
+  .player-action-dock {
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+
+  .gameover-card {
+    max-height: calc(100dvh - 16px);
+    padding: 12px 14px;
+  }
+
+  .trophy-icon {
+    font-size: 2.2rem;
+  }
+
+  .modal-guide {
+    max-height: calc(100dvh - 16px);
   }
 }
 

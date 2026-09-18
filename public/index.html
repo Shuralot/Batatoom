@@ -374,7 +374,7 @@
               autocorrect="off" 
               autocapitalize="characters" 
               spellcheck="false"
-              maxlength="25"
+              maxlength="35"
             >
 
             <!-- Display Espelho em Tempo Real (ativo quando NÃO for a sua vez) -->
@@ -442,14 +442,25 @@
         <!-- CONTEÚDO MULTIPLAYER -->
         <div id="gameover-multiplayer-box">
           <div class="winner-box">
-            <span class="winner-tag">GRANDE CAMPEÃO</span>
+            <span class="winner-tag">👑 GRANDE CAMPEÃO DA PARTIDA</span>
             <h3 id="winner-name" class="winner-name">Jogador</h3>
+            <div id="winner-breakdown" class="winner-breakdown">
+              <!-- Detalhes de pontos de palavras + bônus de sobrevivência -->
+            </div>
+          </div>
+
+          <!-- DESTAQUES & CONDECORAÇÕES (AWARDS) -->
+          <div id="awards-section" class="awards-section" style="display: none;">
+            <h4 class="section-subtitle">🎖️ Destaques da Rodada:</h4>
+            <div id="awards-grid" class="awards-grid">
+              <!-- Preenchido via app.js -->
+            </div>
           </div>
 
           <div class="podium-section">
-            <h4>Classificação Final:</h4>
+            <h4 class="section-subtitle">📊 Classificação Geral:</h4>
             <div id="ranking-list" class="ranking-list">
-              <!-- Ranking de sobrevivência -->
+              <!-- Ranking detalhado -->
             </div>
           </div>
         </div>
@@ -490,7 +501,7 @@
           <button id="btn-play-again-solo" class="btn-solo btn-glow btn-lg" style="display: none;">
             🎮 JOGAR NOVAMENTE (SOLO)
           </button>
-          <button id="btn-exit-solo" class="btn-secondary btn-sm" style="display: none;">
+          <button id="btn-exit-solo" class="btn-secondary btn-action-exit" style="display: none;">
             🏠 MENU INICIAL
           </button>
           <p id="play-again-hint" class="start-hint">Aguardando o anfitrião reiniciar a sala...</p>
@@ -498,37 +509,221 @@
       </div>
     </div>
 
-    <!-- MODAL: REGRAS DO JOGO -->
+    <!-- MODAL: GUIA COMPLETO & COMO JOGAR -->
     <div id="modal-rules" class="modal-backdrop" style="display: none;">
-      <div class="modal-content card-glass">
+      <div class="modal-content card-glass modal-guide">
         <div class="modal-header">
-          <h3>Como Jogar Batatoom! 🥔💣</h3>
-          <button id="btn-close-rules" class="btn-close">&times;</button>
+          <div class="modal-header-title">
+            <span class="modal-title-icon">🥔📖</span>
+            <h3>Guia Completo & Regras</h3>
+          </div>
+          <button id="btn-close-rules" class="btn-close" aria-label="Fechar">&times;</button>
         </div>
-        <div class="modal-body">
-          <div class="rule-item">
-            <span class="rule-num">1</span>
-            <p><strong>A Bomba está ligada:</strong> Cada jogador começa com <strong>3 vidas (❤️)</strong>. A bomba passa de mão em mão!</p>
+
+        <!-- NAVEGAÇÃO POR ABAS -->
+        <div class="guide-tabs">
+          <button type="button" class="guide-tab-btn active" data-tab="tab-rules-basic">
+            <span>🎮 Regras Básicas</span>
+          </button>
+          <button type="button" class="guide-tab-btn" data-tab="tab-rules-score">
+            <span>🏆 Pontuação & Bônus</span>
+          </button>
+          <button type="button" class="guide-tab-btn" data-tab="tab-rules-bomb">
+            <span>🥔 Tensão & Duelo</span>
+          </button>
+          <button type="button" class="guide-tab-btn" data-tab="tab-rules-solo">
+            <span>🕹️ Modo Solo</span>
+          </button>
+        </div>
+
+        <div class="modal-body guide-body">
+          <!-- ABA 1: REGRAS BÁSICAS -->
+          <div id="tab-rules-basic" class="guide-tab-panel active">
+            <div class="rule-item">
+              <span class="rule-num">1</span>
+              <p><strong>A Batata Quente:</strong> Cada jogador começa com vidas (padrão 3 ❤️). A batata pula de mão em mão até alguém deixar queimar!</p>
+            </div>
+            <div class="rule-item">
+              <span class="rule-num">2</span>
+              <p><strong>Palavras em PT-BR:</strong> Digite qualquer palavra legítima do português que contenha a combinação de letras na tela (ex: se o prompt for <strong>"TR"</strong>, valem <em>estrada</em>, <em>entrar</em>, <em>trem</em>, <em>outro</em>).</p>
+            </div>
+            <div class="rule-item">
+              <span class="rule-num">3</span>
+              <p><strong>Tolerância Total a Acentos:</strong> Digite livremente com ou sem acentos (tanto <em>"maca"</em> quanto <em>"maçã"</em> funcionam com validação imediata!).</p>
+            </div>
+            <div class="rule-item">
+              <span class="rule-num">4</span>
+              <p><strong>Sem Repetição:</strong> Palavras já ditas na mesma rodada não podem ser repetidas por nenhum participante.</p>
+            </div>
+            <div class="rule-item">
+              <span class="rule-num">5</span>
+              <p><strong>Tempo Invisível:</strong> O cronômetro da batata é secreto! O ritmo do tique-taque e as reações visuais revelam quando o estouro está próximo. Se queimar na sua mão, você perde 1 vida!</p>
+            </div>
+            <div class="rule-item">
+              <span class="rule-num">6</span>
+              <p><strong>Grande Campeão:</strong> A partida combina a sua habilidade em formar palavras com a sua capacidade de sobreviver. Quem somar a maior pontuação final leva a coroa!</p>
+            </div>
           </div>
-          <div class="rule-item">
-            <span class="rule-num">2</span>
-            <p><strong>Forme Palavras em PT-BR:</strong> Na sua vez, digite qualquer palavra válida do português que contenha as letras exibidas na bomba (ex: se o prompt for <strong>"CA"</strong>, valem <em>maçã</em>, <em>cão</em>, <em>café</em>, <em>abacate</em>).</p>
+
+          <!-- ABA 2: SISTEMA DE PONTUAÇÃO & BALANCEAMENTO -->
+          <div id="tab-rules-score" class="guide-tab-panel">
+            <div class="guide-section-intro">
+              <p>O Batatoom possui um sistema de pontuação calibrado para recompensar vocabulário amplo, rapidez e sobrevivência:</p>
+            </div>
+
+            <div class="guide-card-box">
+              <h5>📏 1. Tamanho da Palavra (Letras)</h5>
+              <div class="guide-table-responsive">
+                <table class="guide-table">
+                  <thead>
+                    <tr>
+                      <th>Comprimento</th>
+                      <th>Pontos Base</th>
+                      <th>Exemplo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>3 a 5 letras</strong></td>
+                      <td>15 a 25 pts</td>
+                      <td><em>sol, café, amigo</em></td>
+                    </tr>
+                    <tr>
+                      <td><strong>6 a 8 letras</strong></td>
+                      <td>33 a 49 pts</td>
+                      <td><em>caderno, morcego</em></td>
+                    </tr>
+                    <tr>
+                      <td><strong>9+ letras (Longa)</strong></td>
+                      <td>59 a 100+ pts</td>
+                      <td><em>computador, universidade</em></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="guide-card-box">
+              <h5>✨ 2. Raridade do Vocabulário (Dicionário Autêntico)</h5>
+              <div class="guide-table-responsive">
+                <table class="guide-table">
+                  <thead>
+                    <tr>
+                      <th>Nível</th>
+                      <th>Bônus</th>
+                      <th>Alívio no Tempo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><span class="pill-badge pill-green">Fácil</span></td>
+                      <td>Pontos padrão (1.0x)</td>
+                      <td>+1.0s</td>
+                    </tr>
+                    <tr>
+                      <td><span class="pill-badge pill-blue">Médio</span></td>
+                      <td>+12 pts &amp; 1.1x</td>
+                      <td>+1.5s</td>
+                    </tr>
+                    <tr>
+                      <td><span class="pill-badge pill-purple">Difícil ⚡</span></td>
+                      <td>+35 pts &amp; 1.3x</td>
+                      <td>+2.5s</td>
+                    </tr>
+                    <tr>
+                      <td><span class="pill-badge pill-gold">Mestre 💎</span></td>
+                      <td>+70 pts &amp; 1.5x</td>
+                      <td>+4.0s</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="guide-card-box">
+              <h5>⚡ 3. Bônus de Rapidez &amp; Jogo Limpo</h5>
+              <ul class="guide-list">
+                <li><strong>Reflexo Rápido (+20 pts):</strong> Responder nos primeiros segundos, enquanto a batata ainda está calma. Despachar a batata rápido dá muitos pontos!</li>
+                <li><strong>Proteção Anti-Segurar (Piso Dinâmico):</strong> Ao receber a batata, você sempre terá um fôlego mínimo garantido (de 8,5s no início, decaindo suavemente até 5,5s nos turnos finais). A batata também resfria, impedindo mortes injustas de quem segura até o último segundo!</li>
+              </ul>
+            </div>
+
+            <div class="guide-card-box highlight-box">
+              <h5>🛡️ 4. Bônus de Sobrevivência (Fim da Partida)</h5>
+              <p>Ao término da partida, cada participante recebe bônus pelas vidas preservadas:</p>
+              <ul class="guide-list">
+                <li><strong>+200 pontos</strong> por cada vida restante.</li>
+                <li><strong>+300 pontos</strong> extras para o <strong>Último Sobrevivente</strong> da arena.</li>
+                <li><strong>Fórmula Final:</strong> <code>Pontos de Palavras + Bônus de Vidas = Pontuação Final</code>.</li>
+              </ul>
+            </div>
           </div>
-          <div class="rule-item">
-            <span class="rule-num">3</span>
-            <p><strong>Acentos são Livres:</strong> Você pode digitar com ou sem acentos (tanto <em>"maca"</em> quanto <em>"maçã"</em> funcionam!).</p>
+
+          <!-- ABA 3: TENSÃO DA BATATA & MATA-MATA -->
+          <div id="tab-rules-bomb" class="guide-tab-panel">
+            <div class="guide-card-box">
+              <h5>🥔 Os 4 Estágios Secretos da Batata</h5>
+              <div class="tension-stage-list">
+                <div class="tension-stage-card stage-calm">
+                  <span class="stage-icon">😊</span>
+                  <div class="stage-info">
+                    <strong>1. Calmo (0% - 40%)</strong>
+                    <p>Batata sorridente, vapor suave e tique-taque espaçado. Hora perfeita para arriscar palavras longas e faturar bônus!</p>
+                  </div>
+                </div>
+                <div class="tension-stage-card stage-warning">
+                  <span class="stage-icon">😐</span>
+                  <div class="stage-info">
+                    <strong>2. Atenção (40% - 70%)</strong>
+                    <p>A batata franze a testa, o vapor esquenta e o tique-taque acelera o compasso.</p>
+                  </div>
+                </div>
+                <div class="tension-stage-card stage-alert">
+                  <span class="stage-icon">😰</span>
+                  <div class="stage-info">
+                    <strong>3. Alerta (70% - 90%)</strong>
+                    <p>Gotas de suor começam a escorrer, a manteiga amolece e o chiado do vapor fica nítido.</p>
+                  </div>
+                </div>
+                <div class="tension-stage-card stage-panic">
+                  <span class="stage-icon">😱</span>
+                  <div class="stage-info">
+                    <strong>4. Pânico (90% - 100%)</strong>
+                    <p>A manteiga escorre em cascata, a batata treme desesperada e o bip fica frenético. Digite qualquer termo simples para se livrar dela!</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="guide-card-box highlight-box">
+              <h5>⚔️ Mata-Mata (Duelo Final)</h5>
+              <p>Quando restam apenas os <strong>2 últimos sobreviventes</strong> na arena:</p>
+              <ul class="guide-list">
+                <li>O tempo inicial da batata é reduzido drasticamente.</li>
+                <li>A cada acerto consecutivo entre os dois, o tempo encurta em mais <strong>0.75s</strong>!</li>
+                <li>As combinações de letras sobem progressivamente para os níveis Médio e Difícil.</li>
+              </ul>
+            </div>
           </div>
-          <div class="rule-item">
-            <span class="rule-num">4</span>
-            <p><strong>Sem Repetição:</strong> Palavras já ditas na mesma rodada não podem ser repetidas.</p>
-          </div>
-          <div class="rule-item">
-            <span class="rule-num">5</span>
-            <p><strong>Tempo Invisível:</strong> O tempo da bomba é secreto! O tique-taque vai ficando cada vez mais frenético conforme a explosão se aproxima. Se explodir com você, você perde 1 vida!</p>
-          </div>
-          <div class="rule-item">
-            <span class="rule-num">6</span>
-            <p><strong>Sobrevivência:</strong> O último sobrevivente com vidas restantes vence a partida!</p>
+
+          <!-- ABA 4: MODO SOLO -->
+          <div id="tab-rules-solo" class="guide-tab-panel">
+            <div class="guide-card-box">
+              <h5>🕹️ Como Funciona o Desafio Solo</h5>
+              <p>Jogue sozinho testando seus reflexos e vocabulário sob pressão:</p>
+              <ul class="guide-list">
+                <li><strong>Acúmulo de Tempo:</strong> A cada palavra correta, você ganha segundos preciosos no cronômetro da batata (com teto de até 45s).</li>
+                <li><strong>Multiplicadores de Combo:</strong>
+                  <ul>
+                    <li>4 acertos consecutivos: <strong>1.5x</strong></li>
+                    <li>8 acertos consecutivos: <strong>2.0x</strong></li>
+                    <li>13+ acertos consecutivos: <strong>2.5x</strong></li>
+                  </ul>
+                </li>
+                <li><strong>8 Níveis de Progressão:</strong> Desde <em>Iniciante</em> até o <em>Mestre Supremo</em>, com sílabas cada vez mais desafiadoras.</li>
+                <li><strong>Recorde Pessoal:</strong> Sua maior pontuação fica salva no navegador para você superar a cada jogatina!</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>

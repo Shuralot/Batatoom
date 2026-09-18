@@ -34,9 +34,9 @@ const COMPLEX_CLUSTERS = [
 
 // Palavras de 2 letras legítimas do português
 const VALID_2_LETTER_WORDS = new Set([
-  'ai', 'ao', 'ar', 'as', 'ca', 'da', 'de', 'do', 'em', 'eu', 'ha', 'ia', 'ir',
+  'ai', 'ao', 'ar', 'as', 'ca', 'da', 'de', 'do', 'em', 'eu', 'fe', 'ha', 'ia', 'ir',
   'ja', 'la', 'me', 'na', 'ne', 'no', 'nu', 'os', 'ou', 'pa', 'pe', 'po', 're',
-  'se', 'si', 'so', 'te', 'ti', 'tu', 'um', 'va', 've', 'vi'
+  'se', 'si', 'so', 'te', 'ti', 'tu', 'um', 'va', 've', 'vi', 'ze'
 ]);
 
 // Lista negra curada de palavras estrangeiras, abreviações, siglas e termos inexistentes
@@ -161,6 +161,183 @@ const MODERN_PT_WORDS = [
   'yakisoba', 'yakisobas', 'ketchup', 'maionese',
   'lingerie', 'lingeries', 'sutiã', 'sutiãs', 'jeans',
   'short', 'shorts', 'blazer', 'blazers', 'top', 'tops'
+];
+
+// Vocabulário de comidas brasileiras típicas, culinária regional, frutas nativas e expressões regionais
+const BRAZILIAN_FOODS_AND_REGIONAL = [
+  // Culinária Nordestina (ingredientes, pratos e petiscos)
+  'macaxeira', 'macaxeiras', 'aipim', 'aipins', 'mandioca', 'mandiocas',
+  'jerimum', 'jerinuns', 'jerimums', 'quiabo', 'quiabos', 'maxixe', 'maxixes',
+  'chuchu', 'chuchus', 'jiló', 'jilos', 'jilós', 'inhame', 'inhames', 'cará', 'caras',
+  'cuscuz', 'cuscuzes', 'tapioca', 'tapiocas', 'beiju', 'beijus', 'goma', 'gomas',
+  'polvilho', 'fécula', 'farinha de mandioca', 'farofa', 'farofas',
+  'acarajé', 'acarajés', 'acaraje', 'acarajes', 'abará', 'abarás', 'abara', 'abaras',
+  'vatapá', 'vatapás', 'vatapa', 'vatapas', 'caruru', 'carurus',
+  'bobó de camarão', 'bobo de camarao', 'bobó', 'bobos', 'bobo',
+  'moqueca', 'moquecas', 'moqueca baiana', 'moqueca de peixe',
+  'baião de dois', 'baiao de dois', 'baião', 'baiao',
+  'sarapatel', 'sarapateis', 'buchada de bode', 'buchada', 'buchadas',
+  'panelada', 'paneladas', 'dobradinha', 'dobradinhas', 'mocotó', 'mocoto',
+  'rabada', 'rabadas', 'pirão', 'pirões', 'pirao', 'piros',
+  'carne de sol', 'carne de charque', 'charque', 'charques', 'jabá', 'jabas',
+  'manteiga de garrafa', 'manteiga da terra', 'queijo de coalho', 'queijo coalho', 'coalho',
+  'requeijão do sertão', 'requeijão de corte',
+  'cartola', 'bolo de rolo', 'bolo souza leão', 'bolo sousa leao',
+  'rapadura', 'rapaduras', 'melado de cana', 'melado', 'melaço',
+  'canjica', 'canjicas', 'curau', 'curaus', 'pamonha', 'pamonhas',
+  'mungunzá', 'mungunzas', 'mungunza', 'mugunza',
+  'cocada', 'cocadas', 'cocada preta', 'cocada branca',
+  'quebra-queixo', 'quebra queixo', 'alfenim', 'alfenins',
+  'cajuína', 'cajuina', 'umbuzada', 'umbuzadas',
+
+  // Culinária Nortista e Amazônica
+  'tacacá', 'tacacas', 'tacaca', 'maniçoba', 'manicoba',
+  'tucupi', 'jambu', 'jambus', 'pato no tucupi',
+  'pirarucu', 'pirarucus', 'pirarucu de casaca',
+  'tambaqui', 'tambaquis', 'costela de tambaqui',
+  'surubim', 'surubins', 'filhote', 'filhotes', 'tucunaré', 'tucunares',
+  'dourada', 'douradas', 'pescada amarela',
+  'farinha d agua', 'farinha de uarini', 'farinha do acre',
+  'beiju de tapioca', 'chibé', 'chibe', 'mujica',
+  'açaí', 'acai', 'acais', 'cupuaçu', 'cupuacu', 'cupuacus',
+  'bacuri', 'bacuris', 'buriti', 'buritis', 'pupunha', 'pupunhas',
+  'camu-camu', 'camucamu', 'biribá', 'biriba', 'murici', 'muricis',
+  'taperebá', 'tapereba', 'castanha do pará', 'castanha do brasil',
+  'castanha de caju', 'guaraná', 'guarana',
+
+  // Culinária Centro-Oeste
+  'pequi', 'pequis', 'arroz com pequi', 'galinhada', 'galinhadas',
+  'empadão goiano', 'empadao goiano', 'guariroba', 'gueroba',
+  'chica doida', 'mojica de pintado', 'pintado', 'pintados',
+  'pacu', 'pacus', 'pacu assado', 'piraputanga', 'caldo de piranha',
+  'traíra', 'traira', 'trairas', 'chipa', 'chipas', 'sopa paraguaia',
+  'pastelão', 'pastelao',
+
+  // Culinária Mineira, Paulista, Carioca e Capixaba (Sudeste)
+  'pão de queijo', 'pao de queijo', 'feijão tropeiro', 'feijao tropeiro',
+  'tutu de feijão', 'tutu', 'tutus', 'virado à paulista', 'virado a paulista', 'virado',
+  'frango com quiabo', 'frango ao molho pardo', 'leitão à pururuca', 'pururuca', 'pururucas',
+  'torresmo', 'torresmos', 'torresminho', 'torresminhos',
+  'costelinha de porco', 'costelinha', 'costelinhas',
+  'angu', 'angus', 'couve refogada', 'couve',
+  'queijo minas', 'queijo canastra', 'queijo do serro', 'queijo prato',
+  'doce de leite', 'goiabada', 'goiabadas', 'romeu e julieta',
+  'broa de milho', 'broa de fubá', 'broa', 'broas', 'fubá', 'fuba',
+  'coxinha', 'coxinhas', 'coxinha de frango', 'coxinha com catupiry',
+  'pastel de feira', 'pastel', 'pasteis', 'pastéis',
+  'esfirra', 'esfirras', 'esfiha', 'esfihas',
+  'quibe', 'quibes', 'kibe', 'kibes',
+  'empada', 'empadas', 'empadão', 'empadao', 'empadões',
+  'rissole', 'rissoles', 'croquete', 'croquetes',
+  'bolinho de bacalhau', 'bolinho de chuva', 'bolinho de arroz',
+  'bauru', 'sanduíche de mortadela', 'pizza paulistana',
+  'picadinho carioca', 'picadinho', 'filé com fritas', 'caldo verde',
+  'biscoito globo', 'biscoito de polvilho', 'sequilho', 'sequilhos',
+  'moqueca capixaba', 'torta capixaba', 'caranguejada', 'peroá frito',
+
+  // Culinária Sulista
+  'churrasco', 'churrascos', 'churrascaria', 'costela no bafo',
+  'picanha', 'picanhas', 'alcatra', 'alcatras', 'maminha', 'maminhas',
+  'cupim', 'cupins', 'fraldinha', 'fraldinhas', 'vazio', 'matambre',
+  'entrevero', 'barreado', 'marreco recheado', 'eisbein',
+  'cuca de banana', 'cuca alemã', 'cuca', 'cucas',
+  'chimia', 'chimias', 'galeto al primo canto', 'galeto', 'galetos',
+  'sopa de capeletti', 'capeletti', 'capeleti',
+  'polenta frita', 'polenta', 'polentas',
+  'pinhão', 'pinhao', 'pinhões', 'pinhoes',
+  'arroz carreteiro', 'arroz de carreteiro', 'carreteiro',
+  'tainha assada', 'tainha', 'tainhas',
+  'sagu com creme', 'sagu de vinho', 'sagu', 'sagus',
+
+  // Carnes, Cortes e Embutidos Típicos
+  'calabresa', 'calabresas', 'linguiça', 'linguica', 'linguiças', 'linguicas',
+  'paio', 'paios', 'lombo', 'lombos', 'pernil', 'pernis',
+  'panceta', 'pancetas', 'bacon', 'presunto', 'presuntos',
+  'mortadela', 'mortadelas', 'salame', 'salames', 'copa',
+  'coração de frango', 'coracao de frango', 'asa de frango', 'tulipa',
+  'espetinho', 'espetinhos',
+
+  // Queijos e Laticínios do Brasil
+  'catupiry', 'requeijão', 'requeijao', 'requeijões', 'requeijoes',
+  'mussarela', 'muçarela', 'mozzarella', 'provolone', 'gorgonzola',
+  'ricota', 'parmesão', 'parmesao', 'parmezão', 'coalhada',
+
+  // Doces e Sobremesas Clássicas Brasileiras
+  'brigadeiro', 'brigadeiros', 'beijinho', 'beijinhos',
+  'cajuzinho', 'cajuzinhos', 'bicho de pé', 'olho de sogra',
+  'quindim', 'quindins', 'quindão', 'quindao',
+  'pé de moleque', 'pe de moleque', 'pé de moça', 'pe de moca',
+  'paçoca de amendoim', 'paçoca', 'pacoca', 'paçocas', 'pacocas',
+  'doce de abóbora', 'doce de batata doce', 'marmelada', 'bananada',
+  'maria mole', 'maria-mole', 'suspiro', 'suspiros',
+  'churros', 'sonho de padaria', 'sonho', 'sonhos',
+  'pudim de leite', 'pudim', 'pudins', 'manjar branco', 'manjar',
+  'arroz doce', 'canjiquinha',
+
+  // Frutas Brasileiras Nativas e Tradicionais
+  'jabuticaba', 'jabuticabas', 'pitanga', 'pitangas',
+  'acerola', 'acerolas', 'caju', 'cajus', 'cajá', 'caja', 'cajás', 'cajas',
+  'cajarana', 'graviola', 'graviolas', 'mangaba', 'mangabas',
+  'umbu', 'umbus', 'imbú', 'imbu',
+  'seriguela', 'seriguelas', 'ciriguela', 'ciriguelas', 'siriguela', 'siriguelas',
+  'jenipapo', 'jenipapos', 'pitomba', 'pitombas',
+  'sapoti', 'sapotis', 'tamarindo', 'tamarindos', 'atemoia', 'atemoias',
+  'maracujá', 'maracuja', 'maracujás', 'maracujas',
+  'jaca', 'jacas', 'goiaba', 'goiabas', 'goiabada cascão',
+  'carambola', 'carambolas', 'abacaxi', 'abacaxis',
+  'manga espada', 'manga rosa', 'manga tommy',
+  'banana da terra', 'banana prata', 'banana nanica', 'banana maçã',
+  'mamão papaia', 'mamão formosa', 'mamão', 'mamao',
+  'melancia', 'melancias', 'melão', 'melao',
+  'bergamota', 'bergamotas', 'mexerica', 'mexericas', 'poncã', 'ponca', 'tangerina', 'tangerinas',
+  'araçá', 'araca', 'uvaia', 'uvaias', 'cambuci', 'grumixama',
+
+  // Bebidas Populares e Tradicionais
+  'caipirinha', 'caipirinhas', 'caipiroska', 'caipivodka',
+  'cachaça', 'cachaca', 'cachaças', 'cachacas', 'pinga', 'pingas', 'aguardente',
+  'caldo de cana', 'garapa', 'garapas',
+  'catuaba', 'catuabas', 'jurubeba', 'jurubebas',
+  'chimarrão', 'chimarrao', 'tereré', 'terere', 'tererê', 'mate gelado', 'erva-mate',
+  'quentão', 'quentao', 'choconhaque', 'batida de coco', 'batida de maracujá',
+
+  // Regionalismos, Gírias e Expressões Populares
+  'oxe', 'oxente', 'vixe', 'visse', 'eita', 'eitcha', 'eita nóis',
+  'arretado', 'arretada', 'arretados', 'arretadas',
+  'avexado', 'avexada', 'avexados', 'avexadas',
+  'aperreado', 'aperreada', 'aperreados', 'aperreadas', 'aperreio',
+  'mofino', 'mofina', 'troncho', 'troncha', 'abestalhado', 'abestalhados',
+  'bichinho', 'bichinha', 'cabra da peste', 'cabra', 'cabras',
+  'fulô', 'xodó', 'xodos', 'dengo', 'dengos', 'dengoso', 'dengosa',
+  'chamego', 'chamegos', 'borogodó', 'borogodo', 'munganga', 'mungangas',
+  'arriado', 'arriada', 'estribado', 'baita',
+  'égua', 'egua', 'paidégua', 'pai d égua', 'maninho', 'maninha',
+  'teba', 'curumim', 'curumins', 'caboclo', 'cabocla', 'caboclos', 'caboclas',
+  'igarapé', 'igarape', 'igarapés', 'igarapeis',
+  'uai', 'sô', 'so', 'trem bão', 'trem', 'bão', 'bao',
+  'truta', 'parça', 'parca', 'rolê', 'role', 'zica', 'caraca', 'mermão', 'mermao',
+  'tchê', 'tche', 'bah', 'guri', 'guria', 'guris', 'gurias', 'piá', 'pias', 'pia',
+  'cacetinho', 'gaudério', 'gauderio', 'bagual', 'baguais', 'vivente', 'viventes',
+
+  // Manifestações Culturais, Folclore e Brasilidades
+  'forró', 'forro', 'frevo', 'frevos', 'maracatu', 'maracatus',
+  'baião', 'baiao', 'xote', 'xotes', 'xaxado', 'xaxados',
+  'samba', 'sambas', 'pagode', 'pagodes', 'axé', 'axe', 'bossa nova',
+  'choro', 'chorinho', 'chorões', 'choroes', 'tropicália', 'tropicalia',
+  'bumba meu boi', 'boi bumbá', 'boi bumba', 'ciranda', 'cirandas',
+  'capoeira', 'capoeiras', 'berimbau', 'berimbaus', 'atabaque', 'atabaques',
+  'pandeiro', 'pandeiros', 'agogô', 'agogo', 'cuíca', 'cuica', 'cavaquinho', 'cavaquinhos',
+  'cordel', 'cordéis', 'cordeis', 'repente', 'repentes', 'repentista', 'repentistas',
+  'cangaço', 'cangaco', 'cangaceiro', 'cangaceiros', 'lampião', 'lampiao',
+  'sertão', 'sertao', 'sertões', 'sertoes', 'caatinga', 'cerrado', 'agreste', 'pampa', 'pantanal',
+  'candango', 'candangos', 'capixaba', 'capixabas', 'carioca', 'cariocas',
+  'paulista', 'paulistas', 'paulistano', 'paulistanos',
+  'mineiro', 'mineiros', 'gaúcho', 'gaucho', 'gaúchos', 'gauchos',
+  'potiguar', 'potiguares', 'paraibano', 'paraibanos', 'pernambucano', 'pernambucanos',
+  'cearense', 'cearenses', 'maranhense', 'maranhenses', 'piauiense', 'piauienses',
+  'sergipano', 'sergipanos', 'alagoano', 'alagoanos', 'baiano', 'baianos',
+  'goiano', 'goianos', 'matogrossense', 'paraense', 'paraenses', 'amazonense', 'amazonenses',
+  'nordestino', 'nordestinos', 'nordestina', 'nordestinas',
+  'nortista', 'nortistas', 'sulista', 'sulistas', 'sudestino', 'sudestinos'
 ];
 
 async function processFileLines(filePath, lineHandler) {
@@ -339,6 +516,61 @@ async function buildDictionary() {
     }
   };
 
+  const addProperName = (raw) => {
+    if (!raw) return;
+    const cleanRaw = raw.trim();
+    if (cleanRaw.length < 2) return;
+
+    // Descarta linhas com números ou caracteres inválidos
+    if (/[0-9#@!$%^&*()+=[\]{}|;:",.<>?/\\]/.test(cleanRaw)) return;
+
+    // Normalização sem acentos, apenas [a-z]
+    const normalized = normalizeWord(cleanRaw);
+    if (normalized.length < 2 || normalized.length > 35) return;
+
+    // Exigência de vogal
+    if (!/[aeiou]/.test(normalized)) return;
+
+    // Ignora 3 letras repetidas consecutivas
+    if (/(.)\1\1/.test(normalized)) return;
+
+    // Rejeita termos da blacklist
+    if (STOPWORDS.has(normalized)) return;
+
+    // Armazena a forma completa
+    const displayLower = cleanRaw.toLowerCase();
+    if (!wordsMap.has(normalized)) {
+      wordsMap.set(normalized, displayLower);
+    } else {
+      const current = wordsMap.get(normalized);
+      if (current === normalized && displayLower !== normalized) {
+        wordsMap.set(normalized, displayLower);
+      }
+    }
+
+    // Se for nome composto por múltiplas palavras, indexa também partes individuais significativas
+    const parts = cleanRaw.split(/[\s\-]+/);
+    if (parts.length > 1) {
+      for (const part of parts) {
+        const pNorm = normalizeWord(part);
+        // Ignora preposições curtas (de, do, da, e, dos, das)
+        if (pNorm.length < 3 || ['dos', 'das'].includes(pNorm)) continue;
+        if (!/[aeiou]/.test(pNorm)) continue;
+        if (STOPWORDS.has(pNorm)) continue;
+
+        const partLower = part.toLowerCase();
+        if (!wordsMap.has(pNorm)) {
+          wordsMap.set(pNorm, partLower);
+        } else {
+          const cur = wordsMap.get(pNorm);
+          if (cur === pNorm && partLower !== pNorm) {
+            wordsMap.set(pNorm, partLower);
+          }
+        }
+      }
+    }
+  };
+
   // 3. Lê base oficial IME-USP (261k palavras autênticas com acentuação e flexões completas)
   const uspPath = path.join(PT_BR_DIR, 'usp');
   if (fs.existsSync(uspPath)) {
@@ -349,26 +581,84 @@ async function buildDictionary() {
     console.log(`   Total acumulado: ${wordsMap.size} palavras`);
   }
 
+  // 3. Lê Léxico PT-BR (145k palavras autênticas da língua portuguesa e vocabulário brasileiro)
+  const lexicoPath = path.join(PT_BR_DIR, 'lexico');
+  if (fs.existsSync(lexicoPath)) {
+    console.log('3. Lendo léxico amplo PT-BR...');
+    await processFileLines(lexicoPath, (line) => {
+      addWord(line);
+    });
+    console.log(`   Total acumulado: ${wordsMap.size} palavras`);
+  }
+
   // 4. Lê Conjugações Verbais do corpus PT-BR (183k formas legítimas)
-  console.log('3. Lendo conjugações verbais completas...');
+  console.log('4. Lendo conjugações verbais completas...');
   await processFileLines(path.join(PT_BR_DIR, 'conjugações'), (line) => {
     addWord(line);
   });
   console.log(`   Total acumulado: ${wordsMap.size} palavras`);
 
-  // 5. Adiciona termos modernos de tecnologia e cultura dicionarizados
-  console.log('4. Integrando termos modernos da língua portuguesa...');
+  // 5. Adiciona vocabulário regional brasileiro e nomes de comida típica
+  console.log('5. Integrando culinária brasileira e vocabulário regional...');
+  for (const item of BRAZILIAN_FOODS_AND_REGIONAL) {
+    addProperName(item);
+    addWord(item);
+  }
+  console.log(`   Total acumulado: ${wordsMap.size} palavras`);
+
+  // 6. Adiciona termos modernos de tecnologia e cultura dicionarizados
+  console.log('6. Integrando termos modernos da língua portuguesa...');
   for (const w of MODERN_PT_WORDS) {
     addWord(w);
   }
   console.log(`   Total acumulado: ${wordsMap.size} palavras`);
 
-  // 6. Lê verbos infinitivos
+  // 7. Lê verbos infinitivos
   const verbosPath = path.join(PT_BR_DIR, 'listas', 'verbos');
   if (fs.existsSync(verbosPath)) {
-    console.log('5. Lendo lista de verbos infinitivos...');
+    console.log('7. Lendo lista de verbos infinitivos...');
     await processFileLines(verbosPath, (line) => {
       addWord(line);
+    });
+    console.log(`   Total acumulado: ${wordsMap.size} palavras`);
+  }
+
+  // 8. Lê lista de países
+  const paisesPath = path.join(PT_BR_DIR, 'listas', 'paises');
+  if (fs.existsSync(paisesPath)) {
+    console.log('8. Lendo lista de países...');
+    await processFileLines(paisesPath, (line) => {
+      addProperName(line);
+    });
+    console.log(`   Total acumulado: ${wordsMap.size} palavras`);
+  }
+
+  // 9. Lê estados do Brasil
+  const estadosPath = path.join(PT_BR_DIR, 'listas', 'estados-br');
+  if (fs.existsSync(estadosPath)) {
+    console.log('9. Lendo estados do Brasil...');
+    await processFileLines(estadosPath, (line) => {
+      addProperName(line);
+    });
+    console.log(`   Total acumulado: ${wordsMap.size} palavras`);
+  }
+
+  // 10. Lê capitais dos estados brasileiros
+  const capitaisPath = path.join(PT_BR_DIR, 'listas', 'capitais-br');
+  if (fs.existsSync(capitaisPath)) {
+    console.log('10. Lendo capitais dos estados brasileiros...');
+    await processFileLines(capitaisPath, (line) => {
+      addProperName(line);
+    });
+    console.log(`   Total acumulado: ${wordsMap.size} palavras`);
+  }
+
+  // 11. Lê continentes
+  const continentesPath = path.join(PT_BR_DIR, 'listas', 'continentes');
+  if (fs.existsSync(continentesPath)) {
+    console.log('11. Lendo continentes...');
+    await processFileLines(continentesPath, (line) => {
+      addProperName(line);
     });
     console.log(`   Total acumulado: ${wordsMap.size} palavras`);
   }

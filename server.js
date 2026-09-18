@@ -125,7 +125,9 @@ io.on('connection', (socket) => {
     if (!result.success) {
       socket.emit('word_rejected', {
         reason: result.reason,
-        word: word
+        word: word,
+        isDuplicate: Boolean(result.isDuplicate),
+        duplicateWord: result.duplicateWord || word
       });
     } else {
       socket.emit('word_accepted', {

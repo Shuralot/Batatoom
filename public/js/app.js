@@ -139,6 +139,9 @@
   const missedWordsList = document.getElementById('missed-words-list');
   const overlayGameOver = document.getElementById('overlay-game-over');
   const winnerName = document.getElementById('winner-name');
+  const winnerBreakdown = document.getElementById('winner-breakdown');
+  const awardsSection = document.getElementById('awards-section');
+  const awardsGrid = document.getElementById('awards-grid');
   const rankingList = document.getElementById('ranking-list');
   const btnPlayAgain = document.getElementById('btn-play-again');
   const playAgainHint = document.getElementById('play-again-hint');
@@ -197,11 +200,25 @@
     localStorage.setItem('batatoom_tv_mode', isTv ? 'true' : 'false');
   });
 
-  // Regras
+  // Regras & Guia Detalhado
   btnShowRules.addEventListener('click', () => { modalRules.style.display = 'flex'; });
   btnCloseRules.addEventListener('click', () => { modalRules.style.display = 'none'; });
   modalRules.addEventListener('click', (e) => {
     if (e.target === modalRules) modalRules.style.display = 'none';
+  });
+
+  const guideTabBtns = document.querySelectorAll('.guide-tab-btn');
+  const guideTabPanels = document.querySelectorAll('.guide-tab-panel');
+
+  guideTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-tab');
+      guideTabBtns.forEach(b => b.classList.remove('active'));
+      guideTabPanels.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      const targetPanel = document.getElementById(targetId);
+      if (targetPanel) targetPanel.classList.add('active');
+    });
   });
 
   // Verifica Parâmetros de URL (?room=BOMB ou #BOMB)
@@ -681,7 +698,11 @@
     if (isHost) {
       hostControls.style.display = 'block';
       guestControls.style.display = 'none';
-      btnPlayAgain.style.display = 'inline-flex';
+      if (!currentRoomData || !currentRoomData.isSolo) {
+        btnPlayAgain.style.display = 'inline-flex';
+      } else {
+        btnPlayAgain.style.display = 'none';
+      }
       playAgainHint.style.display = 'none';
 
       settingDifficulty.disabled = false;
@@ -857,6 +878,11 @@
       deactivateMyTurn(currentActivePlayerName, false);
     }
 
+    if (data.tensionStage !== undefined) {
+      updateTensionUI(data.tensionStage);
+      window.soundEngine.updateTension(data.tensionStage);
+    }
+
     if (data.isSolo) {
       if (hudSoloCombo) hudSoloCombo.textContent = `🔥 x${data.soloMultiplier || 1.0} (${data.soloCombo || 0})`;
       if (hudDifficultyBadge) {
@@ -975,13 +1001,19 @@
   });
 
   // Palavra Rejeitada / Errada
-  socket.on('word_rejected', ({ reason, word }) => {
+  socket.on('word_rejected', ({ reason, word, isDuplicate, duplicateWord }) => {
     window.soundEngine.playError();
     vibrate([100, 50, 100]);
 
-    feedbackMessage.className = 'feedback-message error';
-    feedbackMessage.textContent = reason;
-    inputWord.classList.add('shake-input');
+    if (isDuplicate) {
+      feedbackMessage.className = 'feedback-message error lock-error';
+      feedbackMessage.innerHTML = `<span class="lock-icon-bounce">🔒</span> <strong>Palavra Bloqueada!</strong> "${escapeHtml(word || duplicateWord)}" já foi usada nesta partida!`;
+      inputWord.classList.add('lock-shake');
+    } else {
+      feedbackMessage.className = 'feedback-message error';
+      feedbackMessage.textContent = reason;
+      inputWord.classList.add('shake-input');
+    }
 
     if (word && !inputWord.value) {
       inputWord.value = word;
@@ -990,7 +1022,8 @@
 
     setTimeout(() => {
       inputWord.classList.remove('shake-input');
-    }, 500);
+      inputWord.classList.remove('lock-shake');
+    }, 600);
 
     inputWord.focus();
   });
@@ -1063,9 +1096,55 @@
       if (gameoverMultiplayerBox) gameoverMultiplayerBox.style.display = 'block';
       if (gameoverSoloBox) gameoverSoloBox.style.display = 'none';
       if (btnPlayAgainSolo) btnPlayAgainSolo.style.display = 'none';
-      if (btnExitSolo) btnExitSolo.style.display = 'none';
+      if (btnExitSolo) btnExitSolo.style.display = 'inline-flex';
 
-      winnerName.textContent = data.winner ? data.winner.nickname : 'Ninguém!';
+      if (data.winner) {
+        winnerName.textContent = data.winner.nickname;
+        if (winnerBreakdown) {
+          const wWords = data.winner.score || 0;
+          const wBonus = data.winner.survivalBonus || 0;
+          const wFinal = data.winner.finalScore !== undefined ? data.winner.finalScore : (wWords + wBonus);
+          winnerBreakdown.innerHTML = `
+            <div class="winner-score-badge">
+              <span class="winner-score-number">${wFinal}</span>
+              <span class="winner-score-unit">PONTOS TOTAIS</span>
+            </div>
+            <div class="winner-score-subdetails">
+              <span>✍️ <strong>${wWords} pts</strong> de palavras</span>
+              <span class="bullet-sep">&bull;</span>
+              <span>🛡️ <strong>+${wBonus} pts</strong> de sobrevivência</span>
+            </div>
+          `;
+          winnerBreakdown.style.display = 'flex';
+        }
+      } else {
+        winnerName.textContent = 'Ninguém!';
+        if (winnerBreakdown) winnerBreakdown.style.display = 'none';
+      }
+
+      // Renderiza Destaques & Condecorações (Awards)
+      if (awardsSection && awardsGrid) {
+        if (data.awards && data.awards.length > 0) {
+          awardsGrid.innerHTML = '';
+          data.awards.forEach(aw => {
+            const card = document.createElement('div');
+            card.className = `award-card award-${aw.id}`;
+            card.innerHTML = `
+              <div class="award-icon-box">${aw.icon}</div>
+              <div class="award-text-box">
+                <span class="award-role-title">${escapeHtml(aw.title)}</span>
+                <span class="award-player-name">${escapeHtml(aw.playerName)}</span>
+                <span class="award-detail-text">${escapeHtml(aw.detail)}</span>
+              </div>
+            `;
+            awardsGrid.appendChild(card);
+          });
+          awardsSection.style.display = 'block';
+        } else {
+          awardsSection.style.display = 'none';
+        }
+      }
+
       rankingList.innerHTML = '';
       (data.ranking || []).forEach((r, idx) => {
         const item = document.createElement('div');
@@ -1073,11 +1152,24 @@
 
         const medals = ['🥇', '🥈', '🥉'];
         const pos = medals[idx] || `#${idx + 1}`;
+        const finalPts = r.finalScore !== undefined ? r.finalScore : r.score;
+        const survBadge = r.isLastSurvivor 
+          ? `<span class="ranking-pill survivor-pill" title="Último sobrevivente da arena">🛡️ Sobreviveu</span>` 
+          : `<span class="ranking-pill" title="${r.lives} vidas">❤️ ${r.lives}</span>`;
 
         item.innerHTML = `
           <span class="ranking-pos">${pos}</span>
-          <span class="ranking-name">${escapeHtml(r.nickname)}</span>
-          <span class="ranking-score">${r.score} pts (${r.wordsCount} palavras)</span>
+          <div class="ranking-col-user">
+            <div class="ranking-user-top">
+              <span class="ranking-name">${escapeHtml(r.nickname)}</span>
+              ${survBadge}
+            </div>
+            <span class="ranking-sub">${r.score} pts palavras &bull; ${r.wordsCount} acertos &bull; +${r.survivalBonus || 0} vidas</span>
+          </div>
+          <div class="ranking-col-score">
+            <span class="ranking-score-val">${finalPts}</span>
+            <span class="ranking-score-unit">pts</span>
+          </div>
         `;
         rankingList.appendChild(item);
       });
